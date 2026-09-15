@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import {
-  Archive, BarChart3, BriefcaseBusiness, CircleDollarSign, FlaskConical, Gauge, Landmark, LibraryBig, Loader2, Plus,
+  Archive, BarChart3, BriefcaseBusiness, CircleDollarSign, FlaskConical, Gauge, Landmark, LibraryBig, Loader2, PieChart, Plus,
   RefreshCw, Search, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export const NAV = [
   { path: "ventures", label: "Business & Ventures", icon: BriefcaseBusiness },
   { path: "passive", label: "Passive Income", icon: Sparkles },
   { path: "long-term", label: "Long-Term Income", icon: Landmark },
+  { path: "investing", label: "Investing & Assets", icon: PieChart },
   { path: "experiments", label: "Experiments", icon: FlaskConical },
   { path: "financials", label: "Income & Financials", icon: BarChart3 },
   { path: "discovery", label: "Discovery Library", icon: LibraryBig },
@@ -56,7 +57,7 @@ function LabSidebar() {
   const { route, section, go, state } = useLab();
   const { setOpenMobile, isMobile } = useSidebar();
   // Keep the originating section highlighted while an idea workspace is open.
-  const active = route.page === "idea" ? section : route.page;
+  const active = route.page === "idea" || route.page === "investment" ? section : route.page;
 
   const navigate = (path: string) => {
     go(path);

@@ -286,6 +286,14 @@ function RecordForm({ onOpenChange, title, description, fields, initial, onSubmi
             {[...data.ideas].sort((a, b) => a.title.localeCompare(b.title)).map(i => <option key={i.id} value={i.id}>{i.title}</option>)}
           </select>
         );
+      case "investment":
+        return (
+          <select id={id} value={String(v ?? "")} onChange={e => set(f.key, e.target.value || null)}>
+            <option value="">Not linked</option>
+            {[...(state?.investments ?? [])].filter(i => !i.deletedAt).sort((a, b) => a.name.localeCompare(b.name))
+              .map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </select>
+        );
       case "assumption": {
         const list = ideaId ? data.assumptionsByIdea.get(ideaId) ?? [] : [];
         return (

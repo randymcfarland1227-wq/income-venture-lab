@@ -1,4 +1,4 @@
-import type { Experiment, Expense, Idea, Milestone, SprintAction } from "@/lib/domain";
+import type { Experiment, Expense, Idea, InvestmentExperiment, InvestmentOption, Milestone, SprintAction } from "@/lib/domain";
 import { inferOpportunityType, inferShortIncomeStyle, normalizeTitle } from "@/lib/domain";
 import { TABS, WORKBOOKS, styleFromSheet, styleToSheet, type FieldMap, type SyncedEntity, type TabDef, type TabKey } from "@/lib/sync/tabs";
 import { normalize, parseSheetValue } from "@/lib/sync/values";
@@ -73,12 +73,39 @@ export function blankExpense(partial: Partial<Expense> = {}): Expense {
   } as Expense;
 }
 
+export function blankInvestment(partial: Partial<InvestmentOption> = {}): InvestmentOption {
+  return {
+    id: newId(), syncId: newId(), name: "", classification: "", category: "", accountOrAsset: "Asset",
+    symbol: "", benchmark: "", definition: "", returnMechanism: "", horizon: "", liquidity: "",
+    incomeFrequency: "", passiveLevel: "Low ongoing involvement", status: "Learn", personalInterest: null,
+    personalUnderstanding: null, riskComfort: null, liquidityFit: null, longTermFit: null, researchStatus: "",
+    firstExperiment: "", minimumAccessNotes: "", feesExpenseNotes: "", taxAccountNotes: "", diversification: "",
+    incomeGeneration: "", notes: "", lastReviewed: null, sourceName: "", sourceUrl: "", currentMetric: "",
+    currentValue: null, observationDate: null, dataSource: "", ytdPct: null, oneYearPct: null,
+    fiveYearAnnualizedPct: null, riskProfile: {} as InvestmentOption["riskProfile"],
+    ...provenance, ...stamp(), ...partial,
+  };
+}
+
+export function blankInvestmentExperiment(partial: Partial<InvestmentExperiment> = {}): InvestmentExperiment {
+  return {
+    id: newId(), syncId: newId(), investmentId: null, investmentLabel: "", name: "", mode: "Paper",
+    status: "Planned", hypothesis: "", benchmark: "", startDate: null, reviewDate: null,
+    startingAmount: null, recurringContribution: null, startPrice: null, currentPrice: null, currentValue: null,
+    returnDollars: null, returnPct: null, fees: null, distributions: null, notes: "", learning: "",
+    finalDecision: "", dataSource: "", lastRefreshed: null,
+    ...provenance, ...stamp(), ...partial,
+  } as InvestmentExperiment;
+}
+
 export const BLANK: Record<SyncedEntity, () => SyncRecord> = {
   idea: () => blankIdea() as unknown as SyncRecord,
   experiment: () => blankExperiment() as unknown as SyncRecord,
   sprintAction: () => blankSprintAction() as unknown as SyncRecord,
   milestone: () => blankMilestone() as unknown as SyncRecord,
   expense: () => blankExpense() as unknown as SyncRecord,
+  investment: () => blankInvestment() as unknown as SyncRecord,
+  investmentExperiment: () => blankInvestmentExperiment() as unknown as SyncRecord,
 };
 
 /** Typed site values for every mapped column present in a pulled row. */
@@ -101,6 +128,14 @@ export function readRow(tab: TabDef, values: Record<string, unknown>) {
 
 /** The value a record contributes to a sheet column (site vocabulary translated back). */
 export function sheetValueOf(field: FieldMap, record: Record<string, unknown>): string | number | null {
+  const riskKey: Record<string, string> = {
+    riskMarket: "market", riskPrincipal: "principal", riskCredit: "credit",
+    riskInterestRate: "interestRate", riskInflation: "inflation", riskComplexity: "complexity",
+  };
+  if (riskKey[field.field]) {
+    const profile = record.riskProfile as Record<string, { level?: string }> | undefined;
+    return profile?.[riskKey[field.field]]?.level ?? "";
+  }
   let value = record[field.field];
   if (value === undefined) return null;
   if (field.transform === "style" && typeof value === "string") value = styleToSheet(value);
@@ -133,7 +168,10 @@ export function recordFromRow(
   ideas: Iterable<SyncRecord>,
 ): SyncRecord {
   const tab = TABS[tabKey];
-  const record = { ...BLANK[tab.entity](), ...typed } as SyncRecord;
+  const accepted = Object.fromEntries(
+    Object.entries(typed).filter(([field]) => tab.fields.find(f => f.field === field)?.authority !== "appToSheet"),
+  );
+  const record = { ...BLANK[tab.entity](), ...accepted } as SyncRecord;
   Object.assign(record, {
     syncId: meta.syncId,
     source: meta.source ?? "sheet",
@@ -150,6 +188,10 @@ export function recordFromRow(
     if (!["Active", "Hybrid", "Passive-ish"].includes(String(record.incomeStyle))) record.incomeStyle = "Active";
     if (!record.status) record.status = "Exploring";
     record.stage = "Discover";
+  } else if (tab.entity === "investmentExperiment") {
+    const wanted = normalizeTitle(String(record.investmentLabel ?? ""));
+    const options = ideas;
+    record.investmentId = [...options].find(option => normalizeTitle(String(option.name ?? "")) === wanted)?.id ?? null;
   } else if ("ideaLabel" in record) {
     record.ideaId = resolveIdeaId(String(record.ideaLabel ?? ""), ideas);
   }

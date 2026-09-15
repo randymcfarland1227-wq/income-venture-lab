@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./schema";
 import { runMigrations } from "./migrate";
-import { seedIfEmpty } from "@/lib/server/seed";
+import { seedIfEmpty, seedInvestmentsIfEmpty } from "@/lib/server/seed";
 
 export type Db = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -24,6 +24,7 @@ export async function getReadyDb(): Promise<Db> {
   ready ??= (async () => {
     await runMigrations(env.DB as D1Database);
     await seedIfEmpty(db);
+    await seedInvestmentsIfEmpty(db);
   })().catch(error => {
     ready = null;
     throw error;

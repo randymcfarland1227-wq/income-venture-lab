@@ -167,7 +167,7 @@ export function SyncPage() {
             <tbody>
               {TAB_ORDER.map(key => (
                 <tr key={key} className="cursor-default">
-                  <td className="font-medium">{({ shortIdeas: "Short-term ideas", longIdeas: "Long-term ideas", experiments: "Experiments", sprint: "Sprint actions", plan: "Milestones", costs: "Expenses" } as const)[key]}</td>
+                  <td className="font-medium">{({ shortIdeas: "Short-term ideas", longIdeas: "Long-term ideas", experiments: "Experiments", sprint: "Sprint actions", plan: "Milestones", costs: "Expenses", investments: "Investment options", investmentExperiments: "Investment experiments" } as const)[key]}</td>
                   <td>{WORKBOOKS[TABS[key].workbook].short}</td>
                   <td>{sync?.sheets[key]?.sheetName ?? TABS[key].label}</td>
                   <td className="num">{Object.values(state?.sheetRows ?? {}).filter(list => list.some(r => r.tab === key)).length}</td>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { STAGES, includesLong, money, moneyRange, shortDate, type Expense, type Milestone } from "@/lib/domain";
 import { FindingList } from "../findings";
@@ -14,7 +14,7 @@ import { useLab } from "../store";
 import { Empty, PageHeader, RecordDialog, SectionHeader, Stat, StatusPill, useRecordDialog } from "../ui";
 
 export function LongTermPage({ tab = "opportunities" }: { tab?: string }) {
-  const { data, state } = useLab();
+  const { data, state, go } = useLab();
   const ideas = useMemo(() => data.ideas.filter(i => includesLong(i.horizon)), [data.ideas]);
   const belongs = (ideaId: string | null) => {
     const idea = ideaId ? data.ideaById.get(ideaId) : undefined;
@@ -36,12 +36,18 @@ export function LongTermPage({ tab = "opportunities" }: { tab?: string }) {
         ["opportunities", "Opportunities", ideas.length],
         ["plan", "12-Month Plan", milestones.length],
         ["costs", "Cost Planning", expenses.length],
+        ["investing", "Investing & Assets", state?.investments.filter(i => !i.deletedAt).length ?? 0],
         ["findings", "Findings", findings.length],
       ]} />
 
       {tab === "plan" ? <PlanBoard milestones={milestones} />
         : tab === "costs" ? <CostPlanner expenses={expenses} />
-        : tab === "findings" ? (
+        : tab === "investing" ? (
+          <section className="concept-lesson">
+            <div><p className="eyebrow">Connected Long-Term Layer</p><strong>Investing &amp; Assets</strong><p>Research accounts, investments, benchmarks, risks, source-derived data, and paper trials in the dedicated Lab.</p></div>
+            <Button className="rounded-full" onClick={() => go("investing")}>Open Investing Lab <ArrowRight /></Button>
+          </section>
+        ) : tab === "findings" ? (
           <FindingList findings={findings} defaults={{ scope: "Long Term" }}
             emptyText="Capture what you have learned about building durable income — capital needs, effort patterns, which models compound." />
         ) : (

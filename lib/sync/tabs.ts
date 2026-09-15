@@ -1,8 +1,8 @@
 import type { FieldType } from "./values";
 
 export type WorkbookKey = "short" | "long";
-export type TabKey = "shortIdeas" | "longIdeas" | "experiments" | "sprint" | "plan" | "costs";
-export type SyncedEntity = "idea" | "experiment" | "sprintAction" | "milestone" | "expense";
+export type TabKey = "shortIdeas" | "longIdeas" | "experiments" | "sprint" | "plan" | "costs" | "investments" | "investmentExperiments";
+export type SyncedEntity = "idea" | "experiment" | "sprintAction" | "milestone" | "expense" | "investment" | "investmentExperiment";
 
 export type FieldMap = {
   /** Normalized header text (lowercase, dashes unified) exactly as the Apps Script reports it. */
@@ -13,6 +13,8 @@ export type FieldMap = {
   label: string;
   /** Calculated in the sheet (formula). Pulled for reference, never written or conflicted. */
   readOnly?: boolean;
+  /** twoWay is personal/user data; appToSheet is external or calculated authority. */
+  authority?: "twoWay" | "appToSheet";
   /** Long-term "Style" says Passive; the site says Passive-ish. */
   transform?: "style";
 };
@@ -170,9 +172,76 @@ export const TABS: Record<TabKey, TabDef> = {
       f("notes / vendor", "notes", "text", "Notes / Vendor"),
     ],
   },
+  investments: {
+    key: "investments", label: "Investing & Assets", workbook: "long", entity: "investment", titleField: "name",
+    fields: [
+      f("status", "status", "text", "Status"),
+      f("classification", "classification", "text", "Classification"),
+      f("category", "category", "text", "Category"),
+      f("investment / account", "name", "text", "Investment / Account"),
+      f("symbol / series", "symbol", "text", "Symbol / Series"),
+      f("account or asset", "accountOrAsset", "text", "Account or Asset"),
+      f("definition", "definition", "text", "Definition"),
+      f("how it earns", "returnMechanism", "text", "How It Earns"),
+      f("typical horizon", "horizon", "text", "Typical Horizon"),
+      f("liquidity", "liquidity", "text", "Liquidity"),
+      f("income frequency", "incomeFrequency", "text", "Income Frequency"),
+      f("market risk", "riskMarket", "text", "Market Risk", { authority: "appToSheet" }),
+      f("principal risk", "riskPrincipal", "text", "Principal Risk", { authority: "appToSheet" }),
+      f("credit risk", "riskCredit", "text", "Credit Risk", { authority: "appToSheet" }),
+      f("interest rate risk", "riskInterestRate", "text", "Interest Rate Risk", { authority: "appToSheet" }),
+      f("inflation risk", "riskInflation", "text", "Inflation Risk", { authority: "appToSheet" }),
+      f("complexity", "riskComplexity", "text", "Complexity", { authority: "appToSheet" }),
+      f("passive level", "passiveLevel", "text", "Passive Level"),
+      f("minimum / access notes", "minimumAccessNotes", "text", "Minimum / Access Notes"),
+      f("fees / expense notes", "feesExpenseNotes", "text", "Fees / Expense Notes"),
+      f("tax / account notes", "taxAccountNotes", "text", "Tax / Account Notes"),
+      f("benchmark", "benchmark", "text", "Benchmark"),
+      f("current metric", "currentMetric", "text", "Current Metric", { authority: "appToSheet" }),
+      f("current value", "currentValue", "number", "Current Value", { authority: "appToSheet" }),
+      f("observation date", "observationDate", "date", "Observation Date", { authority: "appToSheet" }),
+      f("data source", "dataSource", "text", "Data Source", { authority: "appToSheet" }),
+      f("ytd %", "ytdPct", "number", "YTD %", { authority: "appToSheet" }),
+      f("1y %", "oneYearPct", "number", "1Y %", { authority: "appToSheet" }),
+      f("5y annualized %", "fiveYearAnnualizedPct", "number", "5Y Annualized %", { authority: "appToSheet" }),
+      f("interest 1-5", "personalInterest", "number", "Interest 1–5"),
+      f("understanding 1-5", "personalUnderstanding", "number", "Understanding 1–5"),
+      f("risk comfort 1-5", "riskComfort", "number", "Risk Comfort 1–5"),
+      f("research status", "researchStatus", "text", "Research Status"),
+      f("first experiment", "firstExperiment", "text", "First Experiment"),
+      f("notes", "notes", "text", "Notes"),
+      f("last reviewed", "lastReviewed", "date", "Last Reviewed"),
+    ],
+  },
+  investmentExperiments: {
+    key: "investmentExperiments", label: "Investment Experiments", workbook: "long", entity: "investmentExperiment", titleField: "name",
+    fields: [
+      f("investment sync id", "investmentSyncId", "text", "Investment Sync ID", { authority: "appToSheet" }),
+      f("investment", "investmentLabel", "text", "Investment"),
+      f("experiment", "name", "text", "Experiment"),
+      f("mode", "mode", "text", "Mode"),
+      f("status", "status", "text", "Status"),
+      f("hypothesis", "hypothesis", "text", "Hypothesis"),
+      f("benchmark", "benchmark", "text", "Benchmark"),
+      f("start date", "startDate", "date", "Start Date"),
+      f("review date", "reviewDate", "date", "Review Date"),
+      f("starting amount", "startingAmount", "number", "Starting Amount"),
+      f("recurring contribution", "recurringContribution", "number", "Recurring Contribution"),
+      f("start price / level", "startPrice", "number", "Start Price / Level"),
+      f("current price / level", "currentPrice", "number", "Current Price / Level", { authority: "appToSheet" }),
+      f("current value", "currentValue", "number", "Current Value", { authority: "appToSheet" }),
+      f("return $", "returnDollars", "number", "Return $", { authority: "appToSheet" }),
+      f("return %", "returnPct", "number", "Return %", { authority: "appToSheet" }),
+      f("fees", "fees", "number", "Fees"),
+      f("learning", "learning", "text", "Learning"),
+      f("decision", "finalDecision", "text", "Decision"),
+      f("data source", "dataSource", "text", "Data Source", { authority: "appToSheet" }),
+      f("last refreshed", "lastRefreshed", "date", "Last Refreshed", { authority: "appToSheet" }),
+    ],
+  },
 };
 
-export const TAB_ORDER: TabKey[] = ["shortIdeas", "longIdeas", "experiments", "sprint", "plan", "costs"];
+export const TAB_ORDER: TabKey[] = ["shortIdeas", "longIdeas", "experiments", "sprint", "plan", "costs", "investments", "investmentExperiments"];
 
 export type GuardrailDef = { key: string; label: string; type: FieldType; group: "situation" | "weights"; hint: string };
 

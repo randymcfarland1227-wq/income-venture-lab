@@ -27,9 +27,13 @@ export function DiscoveryPage({ tab = "short" }: { tab?: string }) {
         ["short", "Short-Term Discovery"],
         ["long", "Long-Term Discovery"],
         ["guardrails", "Guardrails"],
+        ["investing", "Investing Discovery", state?.findings.filter(f => f.scope === "Investing").length ?? 0],
         ["findings", "Synthesized Findings", state?.findings.length ?? 0],
       ]} />
-      {tab === "long" ? <LongDiscovery /> : tab === "guardrails" ? <Guardrails /> : tab === "findings" ? (
+      {tab === "long" ? <LongDiscovery /> : tab === "guardrails" ? <Guardrails /> : tab === "investing" ? (
+        <FindingList findings={(state?.findings ?? []).filter(f => f.scope === "Investing")} defaults={{ scope: "Investing" }}
+          emptyText="Findings about investment structure, liquidity, risk, or what your experiments taught you." />
+      ) : tab === "findings" ? (
         <FindingList findings={state?.findings ?? []} defaults={{ scope: "Global" }}
           emptyText="Insights that apply across opportunities — e.g. “Low-startup service businesses consistently score better for near-term testing.”" />
       ) : <ShortDiscovery />}

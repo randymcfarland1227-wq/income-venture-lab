@@ -54,6 +54,20 @@ r = await sync();
 check("second sync is a no-op", r.result?.ok && r.result.fromSheet === 0 && r.result.toSheet === 0, r.result);
 check("re-running creates no duplicates", r.state.ideas.filter(i => !i.deletedAt).length === liveCount);
 
+// 1b — Investment rows are genuinely two-way for personal fields, while
+// externally sourced/application-derived facts remain app-authoritative.
+const benchmark = r.state.investments.find(i => i.id === "inv-sp500-benchmark");
+await mock("/__edit", { tab: "investments", syncId: benchmark.syncId, set: { status: "Researching", notes: "Compare methodology", "current value": 999999 } });
+r = await sync();
+d = await dump();
+const benchmarkAfterSheet = r.state.investments.find(i => i.id === benchmark.id);
+check("investment status and notes flow Sheet → site", benchmarkAfterSheet.status === "Researching" && benchmarkAfterSheet.notes === "Compare methodology", benchmarkAfterSheet);
+check("manual market-data edit is rejected and re-derived", rowFor(d, "investments", benchmark.syncId)?.values["current value"] === "", rowFor(d, "investments", benchmark.syncId)?.values["current value"]);
+await mutate({ op: "update", collection: "investments", id: benchmark.id, data: { notes: "Source methodology reviewed" } });
+r = await sync();
+d = await dump();
+check("investment notes flow site → Sheet", rowFor(d, "investments", benchmark.syncId)?.values.notes === "Source methodology reviewed");
+
 // 2 — Site-created "Both" idea lands in both workbooks as one idea.
 const created = await mutate({ op: "create", collection: "ideas", data: { title: "Wedding Venue", horizon: "Both", incomeStyle: "Hybrid", opportunityType: "Property", category: "Events", description: "Weekend events" } });
 r = await sync();

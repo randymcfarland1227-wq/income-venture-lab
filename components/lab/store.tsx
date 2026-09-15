@@ -12,6 +12,7 @@ export type Route = { page: string; sub?: string; id?: string; module?: string }
 export function parseHash(hash: string): Route {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
   if (parts[0] === "idea") return { page: "idea", id: parts[1], module: parts[2] };
+  if (parts[0] === "investment") return { page: "investment", id: parts[1], module: parts[2] };
   return { page: parts[0] || "overview", sub: parts[1] };
 }
 
@@ -74,7 +75,7 @@ export function LabProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onHash = () => {
       const next = parseHash(window.location.hash);
-      if (next.page !== "idea") {
+      if (next.page !== "idea" && next.page !== "investment") {
         lastOutside.current = window.location.hash.replace(/^#\/?/, "") || "overview";
         setSection(next.page);
       }

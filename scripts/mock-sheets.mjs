@@ -60,6 +60,14 @@ const DEF = {
     sheetName: "Cost Planner", gid: 14, keys: ["income path", "expense item"],
     headers: ["income path", "expense category", "cost type", "expense item", "low estimate", "high estimate", "actual", "essential?", "due / start date", "notes / vendor"], formulas: {},
   },
+  investments: {
+    sheetName: "Investing & Assets", gid: 15, keys: ["investment / account"],
+    headers: ["status", "classification", "category", "investment / account", "symbol / series", "account or asset", "definition", "how it earns", "typical horizon", "liquidity", "income frequency", "market risk", "principal risk", "credit risk", "interest rate risk", "inflation risk", "complexity", "passive level", "minimum / access notes", "fees / expense notes", "tax / account notes", "benchmark", "current metric", "current value", "observation date", "data source", "ytd %", "1y %", "5y annualized %", "interest 1-5", "understanding 1-5", "risk comfort 1-5", "research status", "first experiment", "notes", "last reviewed"], formulas: {},
+  },
+  investmentExperiments: {
+    sheetName: "Investment Experiments", gid: 16, keys: ["experiment", "investment"],
+    headers: ["investment sync id", "investment", "experiment", "mode", "status", "hypothesis", "benchmark", "start date", "review date", "starting amount", "recurring contribution", "start price / level", "current price / level", "current value", "return $", "return %", "fees", "learning", "decision", "data source", "last refreshed"], formulas: {},
+  },
 };
 
 const blankSys = () => ({ _sync_id: "", _updated_at: "", _version: "", _deleted: false, _source: "" });
@@ -84,6 +92,8 @@ const tabs = {
   costs: [
     row({ "income path": "Example: Consulting", "expense category": "Legal / Admin", "cost type": "One-time", "expense item": "Business registration", "low estimate": 100, "high estimate": 500, actual: "", "essential?": "Yes", "due / start date": "", "notes / vendor": "Check state/local requirements" }),
   ],
+  investments: [],
+  investmentExperiments: [],
 };
 
 const guardrails = {

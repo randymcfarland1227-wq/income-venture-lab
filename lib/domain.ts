@@ -27,6 +27,15 @@ export const RESEARCH_KINDS = ["Note", "Observation", "Question", "Link", "Docum
 export const MILESTONE_STATUSES = ["Not Started", "In Progress", "Done", "Blocked"];
 export const COST_TYPES = ["One-time", "Monthly"];
 
+export const INVESTMENT_STATUSES = ["Learn", "Considering", "Researching", "Watch", "Paper Trial", "Own", "Paused", "Avoid", "Archived"] as const;
+export const INVESTMENT_EXPERIMENT_STATUSES = ["Planned", "Running", "Reviewing", "Complete", "Paused"] as const;
+export const INVESTMENT_MODULES = [
+  { key: "overview", label: "Overview" }, { key: "how", label: "How It Works" },
+  { key: "risk", label: "Risk" }, { key: "performance", label: "Performance & Data" },
+  { key: "costs", label: "Costs & Taxes" }, { key: "research", label: "Research" },
+  { key: "experiments", label: "Experiments" }, { key: "notes", label: "Notes" },
+] as const;
+
 export const BARRIER_TYPES = [
   { key: "capital", label: "Capital" },
   { key: "knowledge", label: "Knowledge / Skill" },
@@ -105,7 +114,7 @@ export type SprintAction = Stamped & {
 };
 
 export type ResearchItem = Stamped & {
-  id: string; ideaId: string | null; area: "Market" | "General"; kind: string; title: string; body: string;
+  id: string; ideaId: string | null; investmentId?: string | null; area: "Market" | "General" | "Investing"; kind: string; title: string; body: string;
   sourceUrl: string; date: string | null; confidence: string; tags: string[];
 };
 
@@ -136,8 +145,51 @@ export type Expense = Stamped & {
 };
 
 export type Finding = Stamped & {
-  id: string; ideaId: string | null; scope: string; title: string; body: string; evidence: string;
+  id: string; ideaId: string | null; investmentId?: string | null; scope: string; title: string; body: string; evidence: string;
   confidence: string; cites: string[];
+};
+
+export type InvestmentRiskProfile = Record<
+  "market" | "principal" | "credit" | "interestRate" | "inflation" | "liquidity" | "concentration" | "regulatory" | "complexity",
+  { level: "Low" | "Moderate" | "High" | "Varies"; explanation: string }
+>;
+
+export type InvestmentOption = Stamped & {
+  id: string; syncId: string; name: string; classification: string; category: string;
+  accountOrAsset: "Account" | "Asset" | "Fund" | "Security" | "Benchmark" | "Cash product" | "Other";
+  symbol: string; benchmark: string; definition: string; returnMechanism: string; horizon: string; liquidity: string;
+  incomeFrequency: string; passiveLevel: string; status: string; personalInterest: Num; personalUnderstanding: Num;
+  riskComfort: Num; liquidityFit: Num; longTermFit: Num; researchStatus: string; firstExperiment: string;
+  minimumAccessNotes: string; feesExpenseNotes: string; taxAccountNotes: string; diversification: string;
+  incomeGeneration: string; notes: string; lastReviewed: string | null; sourceName: string; sourceUrl: string;
+  currentMetric: string; currentValue: Num; observationDate: string | null; dataSource: string;
+  ytdPct: Num; oneYearPct: Num; fiveYearAnnualizedPct: Num; riskProfile: InvestmentRiskProfile;
+  source: string;
+};
+
+export type InvestmentMetric = {
+  id: string; investmentId: string; metric: string; value: number; unit: string; observationDate: string;
+  fetchedAt: string; provider: string; sourceName: string; sourceUrl: string; methodology: string;
+  isDelayed: boolean; isStale: boolean;
+};
+
+export type InvestmentExperiment = Stamped & {
+  id: string; syncId: string; investmentId: string | null; investmentLabel: string; name: string;
+  mode: "Paper" | "Actual"; status: string; hypothesis: string; benchmark: string;
+  startDate: string | null; reviewDate: string | null; startingAmount: Num; recurringContribution: Num;
+  startPrice: Num; currentPrice: Num; currentValue: Num; returnDollars: Num; returnPct: Num;
+  fees: Num; distributions: Num; notes: string; learning: string; finalDecision: string;
+  dataSource: string; lastRefreshed: string | null; source: string;
+};
+
+export type InvestmentSource = {
+  provider: string; status: string; lastAttemptAt: string | null; lastSuccessAt: string | null;
+  lastError: string | null; staleAfterMinutes: number; sourceUrl: string;
+};
+
+export type InvestmentRule = {
+  id: string; investmentId: string; ruleKey: string; ruleYear: number; value: string; unit: string;
+  summary: string; sourceName: string; sourceUrl: string; observationDate: string; fetchedAt: string;
 };
 
 export type ScenarioKey = "conservative" | "expected" | "strong";
@@ -188,6 +240,11 @@ export type AppState = {
   milestones: Milestone[];
   expenses: Expense[];
   findings: Finding[];
+  investments: InvestmentOption[];
+  investmentMetrics: InvestmentMetric[];
+  investmentExperiments: InvestmentExperiment[];
+  investmentSources: InvestmentSource[];
+  investmentRules: InvestmentRule[];
   financials: FinancialModel[];
   guardrails: Record<string, string | number | null>;
   history: HistoryEntry[];
@@ -200,7 +257,7 @@ export type AppState = {
 /** Collections that the generic record API can create, update and delete. */
 export type Collection =
   | "ideas" | "experiments" | "sprint" | "research" | "competitors" | "assumptions"
-  | "barriers" | "milestones" | "expenses" | "findings";
+  | "barriers" | "milestones" | "expenses" | "findings" | "investments" | "investmentExperiments";
 
 // ---------------------------------------------------------------------------
 // Classification

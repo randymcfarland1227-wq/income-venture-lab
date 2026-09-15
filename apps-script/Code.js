@@ -52,6 +52,32 @@ const TABS = {
     workbook: 'long', names: ['Cost Planner'],
     signature: ['income path', 'expense item', 'low estimate'], keys: ['income path', 'expense item'],
   },
+  investments: {
+    workbook: 'long', names: ['Investing & Assets'],
+    signature: ['investment / account', 'account or asset', 'current value'], keys: ['investment / account'],
+    createHeaders: [
+      'Status', 'Classification', 'Category', 'Investment / Account', 'Symbol / Series', 'Account or Asset',
+      'Definition', 'How It Earns', 'Typical Horizon', 'Liquidity', 'Income Frequency', 'Market Risk',
+      'Principal Risk', 'Credit Risk', 'Interest Rate Risk', 'Inflation Risk', 'Complexity', 'Passive Level',
+      'Minimum / Access Notes', 'Fees / Expense Notes', 'Tax / Account Notes', 'Benchmark', 'Current Metric',
+      'Current Value', 'Observation Date', 'Data Source', 'YTD %', '1Y %', '5Y Annualized %',
+      'Interest 1–5', 'Understanding 1–5', 'Risk Comfort 1–5', 'Research Status', 'First Experiment',
+      'Notes', 'Last Reviewed'
+    ],
+    appOwned: ['market risk', 'principal risk', 'credit risk', 'interest rate risk', 'inflation risk', 'complexity',
+      'current metric', 'current value', 'observation date', 'data source', 'ytd %', '1y %', '5y annualized %'],
+  },
+  investmentExperiments: {
+    workbook: 'long', names: ['Investment Experiments'],
+    signature: ['investment', 'experiment', 'starting amount'], keys: ['investment', 'experiment'],
+    createHeaders: [
+      'Investment Sync ID', 'Investment', 'Experiment', 'Mode', 'Status', 'Hypothesis', 'Benchmark',
+      'Start Date', 'Review Date', 'Starting Amount', 'Recurring Contribution', 'Start Price / Level',
+      'Current Price / Level', 'Current Value', 'Return $', 'Return %', 'Fees', 'Learning', 'Decision',
+      'Data Source', 'Last Refreshed'
+    ],
+    appOwned: ['investment sync id', 'current price / level', 'current value', 'return $', 'return %', 'data source', 'last refreshed'],
+  },
 };
 
 const GUARDRAIL_ANCHOR = 'monthly income needed';
@@ -125,13 +151,14 @@ function setup() {
   const log = [];
   withLock_(() => {
     Object.keys(TABS).forEach(key => {
-      const tab = locateTab_(key);
+      const tab = locateTab_(key) || createManagedTab_(key);
       if (!tab) {
         log.push(key + ': tab not found — skipped');
         return;
       }
       ensureSystemColumns_(tab);
       styleSystemColumns_(tab);
+      styleAuthorityColumns_(tab);
       const rows = readRows_(tab);
       const assigned = assignMissingIds_(tab, rows);
       applyCheckboxes_(tab, rows.filter(r => r.isData || tab.cfg.slots).map(r => r.row));
@@ -495,6 +522,32 @@ function locateTab_(key) {
     }
   }
   return null;
+}
+
+function createManagedTab_(key) {
+  const cfg = TABS[key];
+  if (!cfg.createHeaders) return null;
+  const ss = SpreadsheetApp.openById(WORKBOOKS[cfg.workbook]);
+  const sheet = ss.getSheetByName(cfg.names[0]) || ss.insertSheet(cfg.names[0]);
+  sheet.clear();
+  sheet.getRange(1, 1, 1, cfg.createHeaders.length).setValues([cfg.createHeaders]);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, cfg.createHeaders.length)
+    .setBackground('#173934').setFontColor('#ffffff').setFontWeight('bold').setWrap(true);
+  sheet.autoResizeColumns(1, cfg.createHeaders.length);
+  return buildTab_(key, cfg, ss, sheet, 1);
+}
+
+function styleAuthorityColumns_(tab) {
+  const owned = tab.cfg.appOwned || [];
+  owned.forEach(header => {
+    const col = tab.col[header];
+    if (!col) return;
+    const range = tab.sheet.getRange(1, col, tab.sheet.getMaxRows(), 1);
+    range.setBackground('#eef3f8');
+    tab.sheet.getRange(tab.headerRow, col).setBackground('#35566f').setFontColor('#ffffff')
+      .setNote('Source- or application-authoritative. Manual edits are replaced by the next verified refresh.');
+  });
 }
 
 function buildTab_(key, cfg, ss, sheet, headerRow) {

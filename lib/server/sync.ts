@@ -11,11 +11,14 @@ import {
 import { runBatch } from "./batch";
 import { compareForm, newId, now, rawCompareForm, readRow, recordFromRow, resolveIdeaId, sheetValueOf, type SyncRecord } from "./records";
 
-const TABLE = { idea: s.ideas, experiment: s.experiments, sprintAction: s.sprintActions, milestone: s.milestones, expense: s.expenses } as const;
+const TABLE = {
+  idea: s.ideas, experiment: s.experiments, sprintAction: s.sprintActions, milestone: s.milestones, expense: s.expenses,
+  investment: s.investmentOptions, investmentExperiment: s.investmentExperiments,
+} as const;
 const ENTITIES = Object.keys(TABLE) as SyncedEntity[];
 
 // Ideas are reconciled twice so a change pulled from one workbook reaches the other in the same run.
-const PASSES: TabKey[] = ["shortIdeas", "longIdeas", "shortIdeas", "experiments", "sprint", "plan", "costs"];
+const PASSES: TabKey[] = ["shortIdeas", "longIdeas", "shortIdeas", "experiments", "sprint", "plan", "costs", "investments", "investmentExperiments"];
 
 type Baseline = typeof s.syncBaselines.$inferSelect;
 type Conflict = typeof s.syncConflicts.$inferInsert;
@@ -141,13 +144,15 @@ class SyncRun {
   ) {}
 
   static async load(db: Db, options: RunOptions) {
-    const [ideas, experiments, sprint, milestones, expenses, baselines, conflicts, guardrails, research, competitors, assumptions, barriers, financials, findings] =
+    const [ideas, experiments, sprint, milestones, expenses, investments, investmentExperiments, baselines, conflicts, guardrails, research, competitors, assumptions, barriers, financials, findings] =
       await db.batch([
         db.select().from(s.ideas),
         db.select().from(s.experiments),
         db.select().from(s.sprintActions),
         db.select().from(s.milestones),
         db.select().from(s.expenses),
+        db.select().from(s.investmentOptions),
+        db.select().from(s.investmentExperiments),
         db.select().from(s.syncBaselines),
         db.select().from(s.syncConflicts).where(eq(s.syncConflicts.status, "Open")),
         db.select().from(s.guardrails),
@@ -174,8 +179,14 @@ class SyncRun {
     const all: Record<SyncedEntity, SyncRecord[]> = {
       idea: ideas as unknown as SyncRecord[], experiment: experiments as unknown as SyncRecord[],
       sprintAction: sprint as unknown as SyncRecord[], milestone: milestones as unknown as SyncRecord[],
-      expense: expenses as unknown as SyncRecord[],
+      expense: expenses as unknown as SyncRecord[], investment: investments as unknown as SyncRecord[],
+      investmentExperiment: investmentExperiments as unknown as SyncRecord[],
     };
+    const investmentById = new Map(investments.map(i => [i.id, i]));
+    for (const experiment of all.investmentExperiment) {
+      const linked = typeof experiment.investmentId === "string" ? investmentById.get(experiment.investmentId) : undefined;
+      experiment.investmentSyncId = linked?.syncId ?? "";
+    }
     for (const entity of ENTITIES) {
       run.records.set(entity, new Map(all[entity].map(r => [r.id, r])));
       run.bySync.set(entity, new Map(all[entity].map(r => [r.syncId, r])));
@@ -204,6 +215,8 @@ class SyncRun {
         const idea = this.idea(rec.ideaId);
         return !idea || !!idea.deletedAt || includesLong(String(idea.horizon));
       }
+      case "investments":
+      case "investmentExperiments": return true;
     }
   }
 
@@ -294,8 +307,9 @@ class SyncRun {
     const headers = new Set(pulled.headers);
     const formulas = new Set(pulled.formulaHeaders ?? []);
     const present = tab.fields.filter(f => headers.has(f.header));
-    const writable = present.filter(f => !f.readOnly && !formulas.has(f.header));
-    const calculated = present.filter(f => f.readOnly || formulas.has(f.header));
+    const writable = present.filter(f => f.authority !== "appToSheet" && !f.readOnly && !formulas.has(f.header));
+    const calculated = present.filter(f => f.authority !== "appToSheet" && (f.readOnly || formulas.has(f.header)));
+    const authoritative = present.filter(f => f.authority === "appToSheet");
     const records = this.records.get(entity) as Map<string, SyncRecord>;
     const bySync = this.bySync.get(entity) as Map<string, SyncRecord>;
     const seen = new Set<string>();
@@ -309,7 +323,8 @@ class SyncRun {
         if (row.deleted) continue;
         const fresh = newId();
         this.ops.set(`${tabKey}:reassign:${row.row}`, { tab: tabKey, op: "reassign", syncId: row.syncId, row: row.row, newSyncId: fresh });
-        const rec = recordFromRow(tabKey, typed, { row: row.row, sheetName: pulled.sheetName ?? tab.label, syncId: fresh }, this.records.get("idea")?.values() ?? []);
+        const links = entity === "investmentExperiment" ? this.records.get("investment")?.values() : this.records.get("idea")?.values();
+        const rec = recordFromRow(tabKey, typed, { row: row.row, sheetName: pulled.sheetName ?? tab.label, syncId: fresh }, links ?? []);
         this.insert(entity, rec);
         seen.add(fresh);
         this.setBaseline(tabKey, entity, rec, this.baseFrom(writable, typed), row.row);
@@ -332,13 +347,18 @@ class SyncRun {
           adopt.source = "sheet";
           bySync.set(adopt.syncId, adopt);
           this.adopted.add(adopt.id);
-          for (const f of present) if (!invalid.has(f.field)) adopt[f.field] = typed[f.field];
+          // An adopted starter row may absorb user-entered fields and legacy
+          // sheet formulas, but never source-derived/application-owned facts.
+          for (const f of present.filter(field => field.authority !== "appToSheet")) {
+            if (!invalid.has(f.field)) adopt[f.field] = typed[f.field];
+          }
           Object.assign(adopt, { sourceSheet: pulled.sheetName ?? tab.label, sourceRow: row.row });
           this.dirty.add(`${entity}:${adopt.id}`);
           this.setBaseline(tabKey, entity, adopt, this.baseFrom(writable, typed), row.row);
           continue;
         }
-        rec = recordFromRow(tabKey, typed, { row: row.row, sheetName: pulled.sheetName ?? tab.label, syncId: row.syncId }, this.records.get("idea")?.values() ?? []);
+        const links = entity === "investmentExperiment" ? this.records.get("investment")?.values() : this.records.get("idea")?.values();
+        rec = recordFromRow(tabKey, typed, { row: row.row, sheetName: pulled.sheetName ?? tab.label, syncId: row.syncId }, links ?? []);
         this.insert(entity, rec);
         this.setBaseline(tabKey, entity, rec, this.baseFrom(writable, typed), row.row);
         this.historyFor(entity, rec, "imported", `Added from ${WORKBOOKS[tab.workbook].short} · ${pulled.sheetName}`);
@@ -366,7 +386,7 @@ class SyncRun {
           this.dropBaseline(tabKey, rec.syncId);
         } else if (included) {
           // The site restored this record (or moved it back to this horizon).
-          const values = Object.fromEntries(writable.map(f => [f.header, sheetValueOf(f, rec as SyncRecord)]));
+          const values = Object.fromEntries([...writable, ...authoritative].map(f => [f.header, sheetValueOf(f, rec as SyncRecord)]));
           this.queueUpsert(tabKey, entity, rec, values, undefined, this.baseFrom(writable, rec), {}, row.row, true);
           this.log("site→sheet", tabKey, entity, rec.syncId, "restored", "ok", `Restored "${titleOf(entity, rec)}" in ${pulled.sheetName}`);
           this.counts.toSheet++;
@@ -395,6 +415,17 @@ class SyncRun {
       const push: Record<string, unknown> = {};
       const expect: Record<string, string> = {};
       const fromSheet: FieldMap[] = [];
+
+      // Verified source values and application calculations always flow out to
+      // Sheets. A hand edit in one of these columns is intentionally replaced.
+      for (const f of authoritative) {
+        const site = compareForm(f, rec);
+        // `typed` already contains the parsed cell under the mapped field.
+        // Do not run virtual application fields (such as risk profile facets)
+        // through `sheetValueOf`, which reads from the structured site record.
+        const sheet = normalize(typed[f.field]);
+        if (site !== sheet) push[f.header] = sheetValueOf(f, rec);
+      }
 
       for (const f of writable) {
         if (invalid.has(f.field)) continue;
@@ -462,7 +493,7 @@ class SyncRun {
         }
         rec.source = "site";
       }
-      const values = Object.fromEntries(writable.map(f => [f.header, sheetValueOf(f, rec)]));
+      const values = Object.fromEntries([...writable, ...authoritative].map(f => [f.header, sheetValueOf(f, rec)]));
       this.queueUpsert(tabKey, entity, rec, values, undefined, this.baseFrom(writable, rec), {});
     }
 
@@ -529,6 +560,15 @@ class SyncRun {
     if (fields.some(f => f.field === "ideaLabel")) {
       const linked = resolveIdeaId(String(rec.ideaLabel ?? ""), this.records.get("idea")?.values() ?? []);
       if (linked) rec.ideaId = linked;
+    }
+    if (fields.some(f => f.field === "investmentLabel")) {
+      const wanted = normalizeTitle(String(rec.investmentLabel ?? ""));
+      const linked = [...(this.records.get("investment")?.values() ?? [])]
+        .find(option => normalizeTitle(String(option.name ?? "")) === wanted);
+      if (linked) {
+        rec.investmentId = linked.id;
+        rec.investmentSyncId = linked.syncId;
+      }
     }
     for (const f of fields) {
       if (entity === "idea" && (f.field === "status" || f.field === "title")) {
@@ -722,6 +762,8 @@ function titleOf(entity: SyncedEntity | string, rec: SyncRecord) {
   if (entity === "milestone") return pick("title") || pick("ideaLabel") || `Month ${rec.month ?? ""}`.trim();
   if (entity === "expense") return pick("item") || "Expense";
   if (entity === "sprintAction") return pick("action") || "Action";
+  if (entity === "investment") return pick("name") || "Investment";
+  if (entity === "investmentExperiment") return pick("name") || pick("investmentLabel") || "Investment experiment";
   return pick("title") || "Record";
 }
 

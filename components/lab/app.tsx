@@ -16,6 +16,8 @@ import { DiscoveryPage } from "./pages/discovery";
 import { SyncPage } from "./pages/sync";
 import { ArchivePage } from "./pages/archive";
 import { Workspace } from "./workspace/workspace";
+import { InvestingPage } from "./pages/investing";
+import { InvestmentWorkspace } from "./workspace/investment-workspace";
 
 export function IncomeLab() {
   return (
@@ -49,8 +51,10 @@ function Router() {
 
   switch (route.page) {
     case "idea": return <Workspace ideaId={route.id ?? ""} module={route.module} />;
+    case "investment": return <InvestmentWorkspace investmentId={route.id ?? ""} module={route.module} />;
     case "short-term": return <ShortTermPage tab={route.sub} />;
     case "long-term": return <LongTermPage tab={route.sub} />;
+    case "investing": return <InvestingPage tab={route.sub} />;
     case "ventures": return <VenturesPage />;
     case "passive": return <PassivePage />;
     case "experiments": return <ExperimentsPage />;

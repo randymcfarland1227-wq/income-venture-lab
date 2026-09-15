@@ -5,7 +5,7 @@ import {
 
 export type FieldType =
   | "text" | "textarea" | "number" | "money" | "date" | "select" | "url" | "tags"
-  | "idea" | "assumption" | "cites" | "score";
+  | "idea" | "investment" | "assumption" | "cites" | "score";
 
 export type FieldSpec = {
   key: string;
@@ -127,10 +127,47 @@ export const FORMS: Record<Collection | "marketResearch", FieldSpec[]> = {
   findings: [
     { key: "title", label: "Finding", type: "text", wide: true, required: true, placeholder: "A conclusion drawn from research or experiments" },
     { key: "body", label: "Explanation", type: "textarea", wide: true },
-    { key: "scope", label: "Applies To", type: "select", options: ["Global", "Short Term", "Long Term", "Passive", "Idea"] },
+    { key: "scope", label: "Applies To", type: "select", options: ["Global", "Short Term", "Long Term", "Passive", "Investing", "Idea"] },
     { key: "confidence", label: "Confidence", type: "select", options: CONFIDENCE },
     { key: "ideaId", label: "Related Idea", type: "idea" },
     { key: "evidence", label: "Evidence", type: "textarea", wide: true },
     { key: "cites", label: "Cites Research", type: "cites", wide: true },
+  ],
+  investments: [
+    { key: "name", label: "Investment / Account", type: "text", wide: true, required: true },
+    { key: "classification", label: "Classification", type: "text" },
+    { key: "category", label: "Category", type: "select", options: ["Cash & Capital Preservation", "Bonds & Fixed Income", "Stocks & Equity", "Funds", "Real Estate", "Alternative Assets", "Investment Accounts", "Benchmarks"] },
+    { key: "accountOrAsset", label: "Account or Asset?", type: "select", options: ["Account", "Asset", "Fund", "Security", "Benchmark", "Cash product", "Other"] },
+    { key: "symbol", label: "Symbol / Series", type: "text", hint: "Optional. A licensed quote provider is required for security prices." },
+    { key: "status", label: "Personal Status", type: "select", options: ["Learn", "Considering", "Researching", "Watch", "Paper Trial", "Own", "Paused", "Avoid", "Archived"] },
+    { key: "definition", label: "What is it?", type: "textarea", wide: true },
+    { key: "returnMechanism", label: "How It Produces Returns", type: "textarea", wide: true },
+    { key: "horizon", label: "Typical Horizon", type: "text" },
+    { key: "liquidity", label: "Liquidity", type: "text" },
+    { key: "incomeFrequency", label: "Income Frequency", type: "text" },
+    { key: "passiveLevel", label: "Passive Nature", type: "select", options: ["Low ongoing involvement", "Medium", "High ongoing involvement", "Not applicable"] },
+    { key: "benchmark", label: "Benchmark", type: "text" },
+    { key: "minimumAccessNotes", label: "Minimum / Access Notes", type: "textarea", wide: true },
+    { key: "feesExpenseNotes", label: "Fees / Expense Notes", type: "textarea", wide: true },
+    { key: "taxAccountNotes", label: "Tax / Account Notes", type: "textarea", wide: true },
+    { key: "notes", label: "Personal Notes", type: "textarea", wide: true },
+  ],
+  investmentExperiments: [
+    { key: "investmentId", label: "Linked Investment", type: "investment", required: true, section: "Plan" },
+    { key: "name", label: "Experiment Name", type: "text", wide: true, required: true, section: "Plan" },
+    { key: "mode", label: "Mode", type: "select", options: ["Paper", "Actual"], section: "Plan" },
+    { key: "status", label: "Status", type: "select", options: ["Planned", "Running", "Reviewing", "Complete", "Paused"], section: "Plan" },
+    { key: "hypothesis", label: "Question / Hypothesis", type: "textarea", wide: true, section: "Plan" },
+    { key: "benchmark", label: "Benchmark", type: "text", section: "Plan" },
+    { key: "startDate", label: "Start Date", type: "date", section: "Plan" },
+    { key: "reviewDate", label: "Review Date", type: "date", section: "Plan" },
+    { key: "startingAmount", label: "Starting Amount", type: "money", section: "Amounts" },
+    { key: "recurringContribution", label: "Recurring Monthly Contribution", type: "money", section: "Amounts" },
+    { key: "startPrice", label: "Starting Price / Level", type: "number", section: "Amounts", hint: "Use the verified level shown on the start date where available." },
+    { key: "fees", label: "Fees", type: "money", section: "Amounts" },
+    { key: "distributions", label: "Dividends / Distributions Tracked", type: "money", section: "Amounts" },
+    { key: "notes", label: "Notes", type: "textarea", wide: true, section: "Learning" },
+    { key: "learning", label: "What Happened / What I Learned", type: "textarea", wide: true, section: "Learning" },
+    { key: "finalDecision", label: "Next Learning Decision", type: "select", options: ["Continue Learning", "Consider", "Watch", "Own / Continue", "Pause", "Avoid"], section: "Learning" },
   ],
 };

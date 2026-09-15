@@ -8,23 +8,27 @@ import {
 import { GUARDRAILS, TABS, type SyncedEntity, type TabKey } from "@/lib/sync/tabs";
 import { parseSheetValue } from "@/lib/sync/values";
 import { runBatch } from "./batch";
-import { blankExpense, blankExperiment, blankIdea, blankMilestone, blankSprintAction, newId, now, readRow } from "./records";
+import { blankExpense, blankExperiment, blankIdea, blankInvestment, blankInvestmentExperiment, blankMilestone, blankSprintAction, newId, now, readRow } from "./records";
 import { buildSummary, readMeta } from "./sync";
 
 export const TABLES = {
   ideas: s.ideas, experiments: s.experiments, sprint: s.sprintActions, research: s.research,
   competitors: s.competitors, assumptions: s.assumptions, barriers: s.barriers, milestones: s.milestones,
   expenses: s.expenses, findings: s.findings,
+  investments: s.investmentOptions, investmentExperiments: s.investmentExperiments,
 } as const;
 
 const ENTITY_TABLES: Record<SyncedEntity, (typeof TABLES)[keyof typeof TABLES]> = {
   idea: s.ideas, experiment: s.experiments, sprintAction: s.sprintActions, milestone: s.milestones, expense: s.expenses,
+  investment: s.investmentOptions, investmentExperiment: s.investmentExperiments,
 };
 
 /** Columns only the system (import / sync / sheet formulas) may set. */
 const PROTECTED = new Set([
   "id", "syncId", "createdAt", "updatedAt", "deletedAt", "source", "sourceWorkbook", "sourceSheet", "sourceRow",
   "importedAt", "sheetRef", "sheetShortScore", "sheetFitScore", "overallEffort", "sheetNetCash", "sheetNetHourly",
+  "currentMetric", "currentValue", "observationDate", "dataSource", "ytdPct", "oneYearPct", "fiveYearAnnualizedPct",
+  "currentPrice", "returnDollars", "returnPct", "lastRefreshed", "riskProfile",
 ]);
 
 export class MutationError extends Error {}
@@ -42,7 +46,7 @@ export type Mutation =
 // ---------------------------------------------------------------------------
 
 export async function loadState(db: Db): Promise<AppState> {
-  const [ideas, experiments, sprint, research, competitors, assumptions, barriers, milestones, expenses, findings, financials, guardrails, history, conflicts, baselines] =
+  const [ideas, experiments, sprint, research, competitors, assumptions, barriers, milestones, expenses, findings, investments, investmentMetrics, investmentExperiments, investmentSources, investmentRules, financials, guardrails, history, conflicts, baselines] =
     await db.batch([
       db.select().from(s.ideas),
       db.select().from(s.experiments).where(isNull(s.experiments.deletedAt)),
@@ -54,6 +58,11 @@ export async function loadState(db: Db): Promise<AppState> {
       db.select().from(s.milestones).where(isNull(s.milestones.deletedAt)),
       db.select().from(s.expenses).where(isNull(s.expenses.deletedAt)),
       db.select().from(s.findings).where(isNull(s.findings.deletedAt)),
+      db.select().from(s.investmentOptions),
+      db.select().from(s.investmentLiveMetrics).orderBy(desc(s.investmentLiveMetrics.observationDate)),
+      db.select().from(s.investmentExperiments).where(isNull(s.investmentExperiments.deletedAt)),
+      db.select().from(s.investmentSources),
+      db.select().from(s.investmentAccountRules).orderBy(desc(s.investmentAccountRules.ruleYear)),
       db.select().from(s.financialModels),
       db.select().from(s.guardrails),
       db.select().from(s.history).orderBy(desc(s.history.at)).limit(400),
@@ -75,6 +84,11 @@ export async function loadState(db: Db): Promise<AppState> {
     milestones: milestones as unknown as AppState["milestones"],
     expenses: expenses as unknown as AppState["expenses"],
     findings: findings as unknown as AppState["findings"],
+    investments: investments as unknown as AppState["investments"],
+    investmentMetrics: investmentMetrics as unknown as AppState["investmentMetrics"],
+    investmentExperiments: investmentExperiments as unknown as AppState["investmentExperiments"],
+    investmentSources: investmentSources as unknown as AppState["investmentSources"],
+    investmentRules: investmentRules as unknown as AppState["investmentRules"],
     financials: financials.map(f => ({ ...(f.data as unknown as FinancialModel), ideaId: f.ideaId, updatedAt: f.updatedAt })),
     guardrails: Object.fromEntries(guardrails.map(g => [g.key, g.value ?? null])),
     history,
@@ -138,6 +152,11 @@ async function ideaById(db: Db, id: unknown) {
   return (await db.select().from(s.ideas).where(eq(s.ideas.id, id)).get()) ?? null;
 }
 
+async function investmentById(db: Db, id: unknown) {
+  if (typeof id !== "string" || !id) return null;
+  return (await db.select().from(s.investmentOptions).where(eq(s.investmentOptions.id, id)).get()) ?? null;
+}
+
 function historyRow(ideaId: string | null, entityType: string, entityId: string, kind: string, summary: string) {
   return { id: newId(), ideaId, entityType, entityId, kind, summary, at: now() };
 }
@@ -168,6 +187,20 @@ async function create(db: Db, collection: Collection, data: Record<string, unkno
       record = blankExpense(values) as unknown as Record<string, unknown>;
       if (idea && !record.ideaLabel) record.ideaLabel = idea.title;
       break;
+    case "investments":
+      record = blankInvestment(values as never) as unknown as Record<string, unknown>;
+      if (!String(record.name ?? "").trim()) throw new MutationError("An investment option needs a name.");
+      break;
+    case "investmentExperiments": {
+      const investment = await investmentById(db, values.investmentId);
+      record = blankInvestmentExperiment(values as never) as unknown as Record<string, unknown>;
+      if (investment) {
+        record.investmentLabel = investment.name;
+        record.investmentSyncId = investment.syncId;
+      }
+      if (!String(record.name ?? "").trim()) throw new MutationError("An experiment needs a name.");
+      break;
+    }
     default: {
       const defaults: Partial<Record<Collection, Record<string, unknown>>> = {
         competitors: { name: "Untitled competitor" },
@@ -218,6 +251,10 @@ async function update(db: Db, collection: Collection, id: string, data: Record<s
           .where(and(eq(child.ideaId, id), eq(child.ideaLabel, String(current.title)))));
       }
     }
+  }
+  if (collection === "investments" && typeof values.name === "string" && values.name !== current.name) {
+    statements.push(db.update(s.investmentExperiments).set({ investmentLabel: values.name, updatedAt: stamp })
+      .where(eq(s.investmentExperiments.investmentId, id)));
   }
   if (collection === "experiments" && values.finalDecision && values.finalDecision !== current.finalDecision) {
     statements.push(db.insert(s.history).values(historyRow(
