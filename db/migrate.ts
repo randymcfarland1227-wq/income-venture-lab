@@ -4,6 +4,18 @@
 // first request, so a fresh local database (or a new deploy) needs no manual wrangler step.
 const files = import.meta.glob("../drizzle/*.sql", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
+/**
+ * D1 may start more than one Worker isolate at the same time. Keep schema-creation
+ * statements repeatable so concurrent first requests cannot strand the database
+ * between "object created" and "migration recorded".
+ */
+function repeatable(statement: string) {
+  return statement
+    .replace(/^CREATE TABLE\s+(?!IF NOT EXISTS\s+)/i, "CREATE TABLE IF NOT EXISTS ")
+    .replace(/^CREATE UNIQUE INDEX\s+(?!IF NOT EXISTS\s+)/i, "CREATE UNIQUE INDEX IF NOT EXISTS ")
+    .replace(/^CREATE INDEX\s+(?!IF NOT EXISTS\s+)/i, "CREATE INDEX IF NOT EXISTS ");
+}
+
 export async function runMigrations(d1: D1Database) {
   await d1.prepare("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)").run();
   const done = await d1.prepare("SELECT name FROM _migrations").all<{ name: string }>();
@@ -12,10 +24,10 @@ export async function runMigrations(d1: D1Database) {
   for (const [path, sql] of Object.entries(files).sort(([a], [b]) => a.localeCompare(b))) {
     const name = path.split("/").pop() as string;
     if (applied.has(name)) continue;
-    const statements = sql.split("--> statement-breakpoint").map(s => s.trim()).filter(Boolean);
+    const statements = sql.split("--> statement-breakpoint").map(s => repeatable(s.trim())).filter(Boolean);
     await d1.batch([
       ...statements.map(s => d1.prepare(s)),
-      d1.prepare("INSERT INTO _migrations (name, applied_at) VALUES (?, ?)").bind(name, new Date().toISOString()),
+      d1.prepare("INSERT OR IGNORE INTO _migrations (name, applied_at) VALUES (?, ?)").bind(name, new Date().toISOString()),
     ]);
   }
 }

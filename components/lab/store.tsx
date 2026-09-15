@@ -184,6 +184,9 @@ export function LabProvider({ children }: { children: ReactNode }) {
 
   // Periodic reconciliation while the Lab is open, plus a catch-up when the window returns.
   useEffect(() => {
+    // A sync request also initializes the database. Do not race it against the
+    // initial state request on a brand-new deployment.
+    if (!state) return;
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void syncNow();
     }, 60_000);
@@ -195,7 +198,7 @@ export function LabProvider({ children }: { children: ReactNode }) {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
     };
-  }, [syncNow]);
+  }, [state, syncNow]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
