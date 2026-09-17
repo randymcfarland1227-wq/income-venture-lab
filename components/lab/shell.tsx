@@ -3,8 +3,9 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import {
   Archive, BarChart3, BriefcaseBusiness, CircleDollarSign, FlaskConical, Gauge, Landmark, LibraryBig, Loader2, PieChart, Plus,
-  RefreshCw, Search, Sparkles,
+  Moon, RefreshCw, Search, Sparkles, Sun,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarInset, SidebarMenu,
@@ -137,6 +138,7 @@ export function SyncDot({ health }: { health: SyncHealth }) {
 
 function Header() {
   const { setAddIdeaOpen, setSearchOpen, go, state } = useLab();
+  const { setTheme } = useTheme();
   const health = useSyncHealth();
   const shortcut = useSyncExternalStore(
     () => () => undefined,
@@ -152,6 +154,12 @@ function Header() {
         <span className="truncate">Search ideas, research, competitors…</span>
         <kbd className="search-kbd">{shortcut}</kbd>
       </button>
+      <Button variant="outline" size="icon" className="theme-toggle rounded-full" onClick={() => {
+        setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark");
+      }} aria-label="Toggle dark mode" title="Toggle dark mode">
+        <Sun className="theme-light-icon" />
+        <Moon className="theme-dark-icon" />
+      </Button>
       <button type="button" className={cn("sync-pill", `sync-pill-${health}`)} onClick={() => go("sync")}
         title={state?.sync.lastError ?? undefined}>
         <SyncDot health={health} />

@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
+@custom-variant dark (&:is(.dark *));
+
 /* Income & Venture Lab — one calm, light system: deep teal ink, warm neutrals, four pastel area tones. */
 
 :root {
@@ -18,6 +20,20 @@
   --lift: 0 1px 2px rgba(24,45,41,.04), 0 12px 30px rgba(24,45,41,.06);
   --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --series-1:#2a78d6; --series-2:#eb6834; --series-neg:#e34948;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --background:#0b1413; --foreground:#e6efec; --card:#14211f; --card-foreground:#e6efec;
+  --popover:#172522; --popover-foreground:#e6efec; --primary:#8cc8bb; --primary-foreground:#0b1b18;
+  --secondary:#1d2d2a; --secondary-foreground:#dce8e4; --muted:#1a2826; --muted-foreground:#9eb0ab;
+  --accent:#21332f; --accent-foreground:#e6efec; --destructive:#ef786d; --border:#2a3d38;
+  --input:#38504a; --ring:#78b9ac; --sidebar:#0f1c1a;
+  --sidebar-foreground:#dce8e4; --sidebar-primary:#8cc8bb; --sidebar-primary-foreground:#0b1b18;
+  --sidebar-accent:#1c2d29; --sidebar-accent-foreground:#edf5f2; --sidebar-border:#263a35; --sidebar-ring:#78b9ac;
+  --ring-soft: inset 0 0 0 1px rgba(168,205,196,.11);
+  --lift: 0 1px 2px rgba(0,0,0,.22), 0 16px 36px rgba(0,0,0,.24);
+  --series-1:#6fa8ed; --series-2:#f18b5f; --series-neg:#f06b6b;
 }
 
 @theme inline {
@@ -551,6 +567,94 @@ button.link-chip:hover { background: #d9e7e1; }
 .viz-tip { position: absolute; top: 0; left: 50%; z-index: 5; display: grid; gap: .25rem; transform: translate(-50%, calc(-100% - .4rem)); border-radius: .6rem; background: #132c29; padding: .6rem .75rem; color: #fff; font-size: .75rem; white-space: nowrap; pointer-events: none; box-shadow: 0 8px 24px rgba(19,44,41,.25); }
 .viz-tip b { margin-left: .4rem; font-weight: 700; }
 .viz-tip-net { border-top: 1px solid rgba(255,255,255,.2); padding-top: .25rem; }
+
+/* ---------- Dark mode ---------- */
+.theme-toggle { flex: none; }
+.theme-dark-icon { display: none; }
+.dark .theme-light-icon { display: none; }
+.dark .theme-dark-icon { display: block; }
+
+.dark .lab-header { border-bottom-color: rgba(42,61,56,.82); background: rgba(11,20,19,.88); }
+.dark .search-trigger { background: rgba(28,45,41,.9); }
+.dark .search-trigger:hover { background: #243934; }
+.dark .search-kbd { border-color: var(--border); }
+.dark select { background-color: var(--card); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239eb0ab' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+.dark code { background: #1b2b28; }
+
+.dark :where(
+  .panel, .stat, .idea-row, .library-search, .toolbar-button, .view-toggle, .idea-card, .table-wrap,
+  .market-fact, .investment-card, .compare-picker, .investment-workspace-head > div:first-child,
+  .workspace-panel, .risk-grid article, .metric-ledger article, .research-list > button, .experiment-card,
+  .sprint-row, .finding-card, .month-cell, .milestone-card, .sheet-status, .sync-hero, .conflict-card,
+  .event-list, .ws-sync, .module-intro, .ws-card, .detail-field, .research-card, .competitor-card,
+  .barrier-row, .validation-step, .assumption-card, .roadmap-step, .sync-pill, .sync-chip
+) { background: var(--card); }
+
+.dark :where(.nav-button[data-active=true], .segmented button[aria-pressed=true], .module-tab.active) {
+  background: #263a35; color: var(--foreground); box-shadow: var(--ring-soft);
+}
+.dark :where(.segmented, .module-nav, .stage-lane) { background: #182724; }
+.dark :where(.summary-item, .ws-card .detail-field, .experiment-action, .conflict-values div) { background: #192926; }
+.dark :where(.editable-value:hover, .compare-picker label) { background: #1c2d29; }
+.dark :where(.score-picker button, .event-dir, .roadmap-dot, .status-pill, .tag) { background: #1c2c29; color: #b6c7c2; }
+.dark .score-picker button:hover { background: #263b36; }
+.dark .score-picker button.on { background: #28443d; color: #b8e2d8; }
+.dark .score-picker button.current { background: var(--primary); color: var(--primary-foreground); }
+.dark .record-dialog-foot { background: #101b19; }
+.dark .empty { border-color: #35504a; background: rgba(20,33,31,.72); }
+.dark .empty-icon, .dark .editable-placeholder { color: #708782; }
+
+.dark .sync-pill { color: #c3d2ce; }
+.dark :where(.sync-pill-conflict, .sync-pill-issue, .sync-pill-needs_authorization) { background: #342b18; }
+.dark .status-pill.tone-active, .dark .cite-tag, .dark .testing-flag { background: #19364a; color: #9bcbf5; }
+.dark .status-pill.tone-good { background: #173827; color: #91d5a7; }
+.dark .status-pill.tone-warn { background: #442820; color: #ffad91; }
+.dark .tag-calculated { background: #3b321b; color: #eccb76; }
+.dark .link-chip { background: #203630; color: #a8d7cc; }
+.dark .link-chip.muted { background: #1a2926; color: var(--muted-foreground); }
+.dark button.link-chip:hover { background: #29443d; }
+
+.dark .tone-coral { background: #482b25; }
+.dark .tone-blue { background: #213945; }
+.dark .tone-gold { background: #40361e; }
+.dark .tone-violet { background: #332b45; }
+.dark .area-card::after { background: rgba(255,255,255,.06); }
+.dark .area-icon { background: rgba(255,255,255,.09); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.dark .area-lines { color: rgba(230,239,236,.76); }
+.dark .area-examples { color: rgba(230,239,236,.58); }
+
+.dark .lab-table thead th, .dark .lab-table thead .sticky-col { background: #192825; }
+.dark .lab-table .sticky-col { background: var(--card); }
+.dark .lab-table tbody tr:hover, .dark .lab-table tbody tr:focus-visible,
+.dark .lab-table tbody tr:hover .sticky-col { background: #1c2d29; }
+.dark .lab-table tbody tr.cursor-default:hover { background: transparent; }
+.dark .investment-identity { background: #203943; }
+.dark .investment-identity small { color: #a9c1c8; }
+.dark .rule-card { background: #192c37; }
+
+.dark .month-cell.stage-discover, .dark .break-even { background: #1b302a; }
+.dark .month-cell.stage-validate { background: #1c3140; }
+.dark .month-cell.stage-build { background: #39311f; }
+.dark .month-cell.stage-launch { background: #302943; }
+.dark .month-cell.stage-scale { background: #442923; }
+.dark .month-item { background: rgba(11,20,19,.48); }
+.dark :where(.auth-card, .experiment-learning, .event-list li.event-issue) { background: #332b19; }
+.dark :where(.missing-card, .event-list li.event-conflict) { background: #3d241f; }
+.dark .archived-banner { background: #3a3018; }
+.dark .meta-select select { background-color: #20322e; color: #c6d5d1; }
+.dark .meta-select select:hover { background-color: #29403a; }
+.dark .module-intro .area-icon { background: #1d302b; }
+.dark .scenario-table tr.total td, .dark .scenario-table tr.total th { border-top-color: #405a54; }
+.dark .scenario-track { background: #1d2d2a; }
+.dark .validation-n { color: #657974; }
+.dark .viz-legend { color: #bac8c4; }
+.dark .viz-grid { border-top-color: #263a35; }
+.dark .viz-group:hover, .dark .viz-group:focus-visible { background: rgba(255,255,255,.035); }
+
+.dark :where(.focus-panel, .concept-lesson, .scenario-result, .roadmap-step.current, .sync-card) {
+  background: #173934; color: #fff;
+}
+.dark .add-idea-head { background: #173934; }
 
 /* ---------- Responsive ---------- */
 @media (min-width: 768px) { .lab-header { padding: 0 2rem; } .lab-main { padding: 2.5rem 2.25rem 5rem; } }
