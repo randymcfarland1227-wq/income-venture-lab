@@ -590,8 +590,20 @@ button.link-chip:hover { background: #d9e7e1; }
   .barrier-row, .validation-step, .assumption-card, .roadmap-step, .sync-pill, .sync-chip
 ) { background: var(--card); }
 
-.dark :where(.nav-button[data-active=true], .segmented button[aria-pressed=true], .module-tab.active) {
-  background: #263a35; color: var(--foreground); box-shadow: var(--ring-soft);
+.dark .nav-button[data-active=true] {
+  background: #29483f;
+  color: #f1f7f5;
+  box-shadow: inset 0 0 0 1px rgba(140,200,187,.22);
+}
+.dark .segmented button[aria-pressed=true] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 1px 3px rgba(0,0,0,.22);
+}
+.dark .module-tab.active {
+  background: #29483f;
+  color: #f1f7f5;
+  box-shadow: var(--ring-soft);
 }
 .dark :where(.segmented, .module-nav, .stage-lane) { background: #182724; }
 .dark :where(.summary-item, .ws-card .detail-field, .experiment-action, .conflict-values div) { background: #192926; }
