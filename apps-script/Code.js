@@ -827,6 +827,7 @@ const STATE_TAB_MAPS = {
 const TAB_COLLECTION = { shortIdeas: 'ideas', longIdeas: 'ideas', experiments: 'experiments', sprint: 'sprint', plan: 'milestones', costs: 'expenses', investments: 'investments', investmentExperiments: 'investmentExperiments' };
 const COLLECTION_TABS = { ideas: ['shortIdeas', 'longIdeas'], experiments: ['experiments'], sprint: ['sprint'], milestones: ['plan'], expenses: ['costs'], investments: ['investments'], investmentExperiments: ['investmentExperiments'] };
 const PROTECTED_STATE_FIELDS = ['id','syncId','createdAt','updatedAt','deletedAt','source','sourceWorkbook','sourceSheet','sourceRow','importedAt','sheetRef','sheetShortScore','sheetFitScore','overallEffort','sheetNetCash','sheetNetHourly','currentMetric','currentValue','observationDate','dataSource','ytdPct','oneYearPct','fiveYearAnnualizedPct','currentPrice','returnDollars','returnPct','lastRefreshed','riskProfile'];
+const SYNC_SHEETS = { shortIdeas:{sheetName:'Income Ideas',gid:302757590},longIdeas:{sheetName:'Income Options',gid:126322697},experiments:{sheetName:'Short Term Income Tracker',gid:29828859},sprint:{sheetName:'Actualizing Template',gid:1884519258},plan:{sheetName:'12-Month Plan',gid:401181688},costs:{sheetName:'Cost Planner',gid:1272715874},investments:{sheetName:'Investing & Assets',gid:777753465},investmentExperiments:{sheetName:'Investment Experiments',gid:97191746},guardrails:{sheetName:'Instructions',gid:1324825440} };
 
 function mapFields_(key) {
   return (STATE_TAB_MAPS[key] || []).map(function(spec) {
@@ -884,7 +885,13 @@ function publicState_(state) {
   });
   out.conflicts = out.conflicts || [];
   out.sheetRows = out.sheetRows || {};
-  if (out.sync && out.sync.status === 'syncing') out.sync.status = out.sync.lastError ? 'error' : 'synced';
+  out.sync = Object.assign({}, out.sync || {}, {
+    configured: true,
+    health: out.sync && out.sync.lastError ? 'error' : 'synced',
+    openConflicts: (out.conflicts || []).length,
+    editorUrl: 'https://script.google.com/d/1V40wOjW0D5BJ5SrpStBrOdJRpFAMP2nxod5oNhy8KJ0JK3l9mbYM4Ruo/edit',
+    sheets: Object.assign({}, SYNC_SHEETS, (out.sync && out.sync.sheets) || {})
+  });
   return out;
 }
 
@@ -1023,6 +1030,7 @@ function reconcileState_(state, selectedTabs) {
   });
   const g = pullGuardrails_();
   if (g.found) state.guardrails = Object.assign({}, state.guardrails || {}, g.values || {});
-  state.sync = { status:'synced',lastSyncAt:new Date().toISOString(),lastSuccessAt:new Date().toISOString(),lastError:null,pendingConflicts:0,workbooks:[{key:'short',name:'Short-Term Workbook',found:true},{key:'long',name:'Long-Term Workbook',found:true}] };
+  const syncedAt = new Date().toISOString();
+  state.sync = Object.assign({}, state.sync || {}, { configured:true,health:'synced',lastRunAt:syncedAt,lastSuccessAt:syncedAt,lastError:null,openConflicts:0,sheets:SYNC_SHEETS });
   return { ok:true,fromSheet:fromSheet,toSheet:toSheet };
 }
