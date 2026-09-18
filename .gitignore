@@ -42,6 +42,7 @@ apps-script/.clasp.json
 next-env.d.ts
 *.tsbuildinfo
 /dist/
+/dist-pages/
 /.wrangler/
 /.sites-runtime/
 /.agents/

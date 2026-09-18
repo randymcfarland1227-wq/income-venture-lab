@@ -6,6 +6,7 @@ import type { AppState, Collection } from "@/lib/domain";
 import type { Mutation } from "@/lib/server/repo";
 import type { TabKey } from "@/lib/sync/tabs";
 import { derive, type Derived } from "./derive";
+import { runtimeApi } from "@/lib/client/runtime-api";
 
 export type Route = { page: string; sub?: string; id?: string; module?: string };
 
@@ -46,13 +47,6 @@ export function useLab() {
   const value = useContext(LabContext);
   if (!value) throw new Error("useLab must be used inside <LabProvider>");
   return value;
-}
-
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  const data = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(data.error || "Something went wrong.");
-  return data;
 }
 
 export function LabProvider({ children }: { children: ReactNode }) {
@@ -97,9 +91,7 @@ export function LabProvider({ children }: { children: ReactNode }) {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/state", { cache: "no-store" });
-      const data = (await response.json()) as AppState & { error?: string };
-      if (!response.ok) throw new Error(data.error || "Could not load the lab.");
+      const data = await runtimeApi.state<AppState>();
       setState(data);
       setError(null);
     } catch (e) {
@@ -113,8 +105,7 @@ export function LabProvider({ children }: { children: ReactNode }) {
     const run = (async () => {
       setSyncing(true);
       try {
-        const data = await postJson<{ state: AppState; result?: { ok: boolean; error?: string; fromSheet: number; toSheet: number }; setupLog?: string[] }>(
-          "/api/sync", { action, tabs });
+        const data = await runtimeApi.sync<{ state: AppState; result?: { ok: boolean; error?: string; fromSheet: number; toSheet: number }; setupLog?: string[] }>(action, tabs);
         if (editSeq.current === startedAt) setState(data.state);
         else void load();
         if (action === "setup" && data.setupLog) toast.success("Sheet setup finished", { description: data.setupLog.slice(0, 3).join(" · ") });
@@ -140,7 +131,7 @@ export function LabProvider({ children }: { children: ReactNode }) {
   const save = useCallback(async (m: Mutation) => {
     editSeq.current++;
     try {
-      const data = await postJson<{ id?: string; state: AppState }>("/api/mutate", m);
+      const data = await runtimeApi.mutate<{ id?: string; state: AppState }>(m);
       setState(data.state);
       scheduleSync();
       return { id: data.id };
@@ -171,11 +162,9 @@ export function LabProvider({ children }: { children: ReactNode }) {
   // First load, then an immediate reconcile with the Sheets.
   useEffect(() => {
     let alive = true;
-    fetch("/api/state", { cache: "no-store" })
-      .then(async r => ({ ok: r.ok, data: (await r.json()) as AppState & { error?: string } }))
-      .then(({ ok, data }) => {
+    runtimeApi.state<AppState>()
+      .then(data => {
         if (!alive) return;
-        if (!ok) throw new Error(data.error || "Could not load the lab.");
         setState(data);
         void syncNow();
       })

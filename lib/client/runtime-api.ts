@@ -1,0 +1,70 @@
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcOb6BTqpOjaJIpKDzDacrfW2BYZr1m8weymvNt91iuSsRcWS7aEShAYY1QLid2Xc-nQ/exec";
+const IS_GITHUB_PAGES = typeof window !== "undefined" && window.location.hostname.endsWith("github.io");
+
+type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: number };
+let frame: HTMLIFrameElement | null = null;
+let ready: Promise<void> | null = null;
+let session = "";
+const pending = new Map<string, Pending>();
+
+function bridgeReady() {
+  if (ready) return ready;
+  ready = new Promise<void>((resolve, reject) => {
+    session = crypto.randomUUID();
+    frame = document.createElement("iframe");
+    frame.hidden = true;
+    frame.title = "Income & Venture Lab data connection";
+    frame.src = `${APPS_SCRIPT_URL}?mode=bridge&origin=${encodeURIComponent(window.location.origin)}&session=${encodeURIComponent(session)}`;
+    document.body.appendChild(frame);
+    const timeout = window.setTimeout(() => reject(new Error("The Google Sheets connection did not respond. Refresh and try again.")), 20_000);
+    window.addEventListener("message", event => {
+      if (event.source !== frame?.contentWindow || event.data?.session !== session) return;
+      if (event.data.type === "ivl-ready") {
+        window.clearTimeout(timeout);
+        resolve();
+        return;
+      }
+      if (event.data.type !== "ivl-result") return;
+      const item = pending.get(event.data.id);
+      if (!item) return;
+      pending.delete(event.data.id);
+      window.clearTimeout(item.timer);
+      if (event.data.ok) item.resolve(event.data.value);
+      else item.reject(new Error(event.data.error || "The data connection failed."));
+    });
+  });
+  return ready;
+}
+
+async function bridgeCall<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  await bridgeReady();
+  const id = crypto.randomUUID();
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      pending.delete(id);
+      reject(new Error("The Google Sheets connection timed out."));
+    }, 30_000);
+    pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
+    frame!.contentWindow!.postMessage({ type: "ivl-call", id, session, action, payload }, "*");
+  });
+}
+
+async function localJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
+  const data = await response.json() as T & { error?: string };
+  if (!response.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+export const runtimeApi = {
+  state: <T>() => IS_GITHUB_PAGES ? bridgeCall<T>("state") : localJson<T>("/api/state", { cache: "no-store" }),
+  mutate: <T>(mutation: unknown) => IS_GITHUB_PAGES
+    ? bridgeCall<T>("mutate", { mutation })
+    : localJson<T>("/api/mutate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(mutation) }),
+  sync: <T>(action: string, tabs?: unknown) => IS_GITHUB_PAGES
+    ? bridgeCall<T>("sync", { action, tabs })
+    : localJson<T>("/api/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, tabs }) }),
+  investmentData: <T>(force = false) => IS_GITHUB_PAGES
+    ? bridgeCall<T>("investmentData", { force })
+    : localJson<T>(`/api/investment-data${force ? "?refresh=1" : ""}`, { cache: "no-store" }),
+};

@@ -14,6 +14,9 @@
  */
 
 const SYNC_SECRET = '%%SYNC_SECRET%%';
+const GITHUB_ORIGIN = 'https://randymcfarland1227-wq.github.io';
+const STATE_PREFIX = 'ivl_state_';
+const STATE_CHUNK_SIZE = 8000;
 
 const WORKBOOKS = {
   short: '1rEDmWfsFzu4_KiXdzpZEBvupqZwdakL5R86ZEQYlCOo',
@@ -96,6 +99,19 @@ const GUARDRAIL_LABELS = [
 
 function doGet(e) {
   const params = (e && e.parameter) || {};
+  if (params.mode === 'bridge' && params.origin === GITHUB_ORIGIN && params.session) {
+    const origin = JSON.stringify(params.origin);
+    const session = JSON.stringify(params.session);
+    const html = '<!doctype html><meta charset="utf-8"><script>' +
+      'const ORIGIN=' + origin + ',SESSION=' + session + ';' +
+      'addEventListener("message",function(e){' +
+      'if(e.origin!==ORIGIN||!e.data||e.data.type!=="ivl-call"||e.data.session!==SESSION)return;' +
+      'var m=e.data;google.script.run.withSuccessHandler(function(v){parent.postMessage({type:"ivl-result",id:m.id,session:SESSION,ok:true,value:v},ORIGIN)})' +
+      '.withFailureHandler(function(err){parent.postMessage({type:"ivl-result",id:m.id,session:SESSION,ok:false,error:(err&&err.message)||String(err)},ORIGIN)})' +
+      '.apiBridgeCall({action:m.action,payload:m.payload||{}});' +
+      '});parent.postMessage({type:"ivl-ready",session:SESSION},ORIGIN);</script>';
+    return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
   if (params.secret === SYNC_SECRET && params.action) return json_(dispatch_({ action: params.action }));
   return json_({ ok: true, service: 'income-venture-lab-sync', version: 1 });
 }
@@ -131,6 +147,10 @@ function dispatch_(body) {
         };
       case 'setup':
         return { ok: true, log: setup() };
+      case 'bootstrapState':
+        if (!body.state || typeof body.state !== 'object') return { ok: false, error: 'Missing state' };
+        saveAppState_(body.state);
+        return { ok: true, bytes: JSON.stringify(body.state).length };
       default:
         return { ok: false, error: 'Unknown action: ' + body.action };
     }
@@ -785,4 +805,226 @@ function columnLetter_(col) {
     col = Math.floor((col - 1) / 26);
   }
   return s;
+}
+
+// ---------------------------------------------------------------------------
+// GitHub Pages application API
+// ---------------------------------------------------------------------------
+
+// Header, state field, value type, authority. Fields marked `app` are never
+// accepted from Sheets; verified external/calculated data always wins.
+const STATE_TAB_MAPS = {
+  shortIdeas: ['status:status:t','tier:tier:t','category:category:t','opportunity:title:t','personal fit / angle:personalFitAngle:t','first cash:firstCash:t','startup cost:startupLow:n','weekly hrs:weeklyHours:n','income model:incomeModel:t','low monthly:monthlyLow:n','high monthly:monthlyHigh:n','speed 1-5:speed:n','fit 1-5:fit:n','demand 1-5:demand:n','scale 1-5:scale:n','low cost 1-5:lowCost:n','low risk 1-5:lowRisk:n','score /100:sheetShortScore:n:app','first test:firstTest:t'],
+  longIdeas: ['category:category:t','income path:title:t','how it earns:howItEarns:t','style:incomeStyle:t','startup low:startupLow:n','startup high:startupHigh:n','monthly cost:monthlyCost:n','weeks to first $:weeksToFirst:n','hours / week:weeklyHours:n','monthly income low:monthlyLow:n','monthly income high:monthlyHigh:n','skill fit 1-5:skillFit:n','interest 1-5:interest:n','risk comfort 1-5:riskComfort:n','passive potential 1-5:passivePotential:n','setup effort 1-5:setupEffort:n','ongoing effort 1-5:ongoingEffort:n','sales effort 1-5:salesEffort:n','complexity 1-5:complexity:n','overall effort 1-5:overallEffort:n:app','fit score /100:sheetFitScore:n:app','status:status:t','first low-cost test:firstTest:t','notes:notes:t'],
+  experiments: ['idea:ideaLabel:t','status:status:t','start date:startDate:d','decision date:decisionDate:d','hypothesis:hypothesis:t','test action:testAction:t','budget:budget:n','hours:actualHours:n','leads:leads:n','replies:replies:n','sales:sales:n','revenue:revenue:n','direct cost:directCosts:n','net cash:sheetNetCash:n:app','net $/hr:sheetNetHourly:n:app','decision / learning:learning:t'],
+  sprint: ['day:day:t','status:status:t','action:action:t','deliverable:deliverable:t','time:time:t','cost cap:costCap:n','success signal:successSignal:t','result / notes:resultNotes:t'],
+  plan: ['month:month:n','income path:ideaLabel:t','stage:stage:t','milestone / hypothesis:title:t','target date:targetDate:d','time budget hrs:timeBudget:n','spending cap:spendingCap:n','target monthly income:targetIncome:n','actual monthly income:actualIncome:n','status:status:t','next action:nextAction:t','evidence / decision notes:evidenceNotes:t'],
+  costs: ['income path:ideaLabel:t','expense category:category:t','cost type:costType:t','expense item:item:t','low estimate:low:n','high estimate:high:n','actual:actual:n','essential?:essential:t','due / start date:dueDate:d','notes / vendor:notes:t'],
+  investments: ['status:status:t','classification:classification:t','category:category:t','investment / account:name:t','symbol / series:symbol:t','account or asset:accountOrAsset:t','definition:definition:t','how it earns:returnMechanism:t','typical horizon:horizon:t','liquidity:liquidity:t','income frequency:incomeFrequency:t','market risk:riskMarket:t:app','principal risk:riskPrincipal:t:app','credit risk:riskCredit:t:app','interest rate risk:riskInterestRate:t:app','inflation risk:riskInflation:t:app','complexity:riskComplexity:t:app','passive level:passiveLevel:t','minimum / access notes:minimumAccessNotes:t','fees / expense notes:feesExpenseNotes:t','tax / account notes:taxAccountNotes:t','benchmark:benchmark:t','current metric:currentMetric:t:app','current value:currentValue:n:app','observation date:observationDate:d:app','data source:dataSource:t:app','ytd %:ytdPct:n:app','1y %:oneYearPct:n:app','5y annualized %:fiveYearAnnualizedPct:n:app','interest 1-5:personalInterest:n','understanding 1-5:personalUnderstanding:n','risk comfort 1-5:riskComfort:n','research status:researchStatus:t','first experiment:firstExperiment:t','notes:notes:t','last reviewed:lastReviewed:d'],
+  investmentExperiments: ['investment sync id:investmentSyncId:t:app','investment:investmentLabel:t','experiment:name:t','mode:mode:t','status:status:t','hypothesis:hypothesis:t','benchmark:benchmark:t','start date:startDate:d','review date:reviewDate:d','starting amount:startingAmount:n','recurring contribution:recurringContribution:n','start price / level:startPrice:n','current price / level:currentPrice:n:app','current value:currentValue:n:app','return $:returnDollars:n:app','return %:returnPct:n:app','fees:fees:n','learning:learning:t','decision:finalDecision:t','data source:dataSource:t:app','last refreshed:lastRefreshed:d:app'],
+};
+
+const TAB_COLLECTION = { shortIdeas: 'ideas', longIdeas: 'ideas', experiments: 'experiments', sprint: 'sprint', plan: 'milestones', costs: 'expenses', investments: 'investments', investmentExperiments: 'investmentExperiments' };
+const COLLECTION_TABS = { ideas: ['shortIdeas', 'longIdeas'], experiments: ['experiments'], sprint: ['sprint'], milestones: ['plan'], expenses: ['costs'], investments: ['investments'], investmentExperiments: ['investmentExperiments'] };
+const PROTECTED_STATE_FIELDS = ['id','syncId','createdAt','updatedAt','deletedAt','source','sourceWorkbook','sourceSheet','sourceRow','importedAt','sheetRef','sheetShortScore','sheetFitScore','overallEffort','sheetNetCash','sheetNetHourly','currentMetric','currentValue','observationDate','dataSource','ytdPct','oneYearPct','fiveYearAnnualizedPct','currentPrice','returnDollars','returnPct','lastRefreshed','riskProfile'];
+
+function mapFields_(key) {
+  return (STATE_TAB_MAPS[key] || []).map(function(spec) {
+    const p = spec.split(':'); return { header: p[0], field: p[1], type: p[2], app: p[3] === 'app' };
+  });
+}
+
+function apiBridgeCall(request) {
+  const action = request && request.action;
+  const payload = (request && request.payload) || {};
+  let state = loadAppState_();
+  if (!state) throw new Error('The Lab has not been initialized.');
+  if (action === 'state') return publicState_(state);
+  if (action === 'investmentData') return { metrics: state.investmentMetrics || [], sources: state.investmentSources || [], rules: state.investmentRules || [], marketQuoteProvider: 'Official-source observations are refreshed by the Lab; security quotes require a configured provider.' };
+  if (action === 'mutate') {
+    const result = mutateState_(state, payload.mutation || {});
+    saveAppState_(state);
+    syncMutationToSheets_(state, payload.mutation || {}, result.id);
+    return { id: result.id, state: publicState_(state) };
+  }
+  if (action === 'sync') {
+    const setupLog = payload.action === 'setup' ? setup() : null;
+    const result = reconcileState_(state, payload.tabs);
+    saveAppState_(state);
+    return { state: publicState_(state), result: result, setupLog: setupLog };
+  }
+  throw new Error('Unknown application action: ' + action);
+}
+
+function loadAppState_() {
+  const props = PropertiesService.getScriptProperties();
+  const count = Number(props.getProperty(STATE_PREFIX + 'count') || 0);
+  if (!count) return null;
+  let json = '';
+  for (let i = 0; i < count; i++) json += props.getProperty(STATE_PREFIX + i) || '';
+  return JSON.parse(json);
+}
+
+function saveAppState_(state) {
+  const props = PropertiesService.getScriptProperties();
+  const json = JSON.stringify(state);
+  const oldCount = Number(props.getProperty(STATE_PREFIX + 'count') || 0);
+  const count = Math.ceil(json.length / STATE_CHUNK_SIZE);
+  const updates = {};
+  updates[STATE_PREFIX + 'count'] = String(count);
+  for (let i = 0; i < count; i++) updates[STATE_PREFIX + i] = json.slice(i * STATE_CHUNK_SIZE, (i + 1) * STATE_CHUNK_SIZE);
+  props.setProperties(updates, false);
+  for (let i = count; i < oldCount; i++) props.deleteProperty(STATE_PREFIX + i);
+}
+
+function publicState_(state) {
+  const out = JSON.parse(JSON.stringify(state));
+  ['experiments','sprint','research','competitors','assumptions','barriers','milestones','expenses','findings','investmentExperiments'].forEach(function(k) {
+    out[k] = (out[k] || []).filter(function(r) { return !r.deletedAt; });
+  });
+  out.conflicts = out.conflicts || [];
+  out.sheetRows = out.sheetRows || {};
+  return out;
+}
+
+function mutateState_(state, m) {
+  const now = new Date().toISOString();
+  if (m.op === 'saveFinancials') {
+    const item = Object.assign({}, m.model || {}, { ideaId: m.ideaId, updatedAt: now });
+    const idx = (state.financials || []).findIndex(function(x) { return x.ideaId === m.ideaId; });
+    if (idx >= 0) state.financials[idx] = item; else (state.financials || (state.financials = [])).push(item);
+    return { id: m.ideaId };
+  }
+  if (m.op === 'setGuardrail') {
+    (state.guardrails || (state.guardrails = {}))[m.key] = m.value;
+    writeGuardrails_({ values: state.guardrails });
+    return { id: m.key };
+  }
+  if (m.op === 'resolveConflict') return { id: m.id };
+  const list = state[m.collection];
+  if (!Array.isArray(list)) throw new Error('Unknown collection: ' + m.collection);
+  if (m.op === 'create') {
+    const id = Utilities.getUuid();
+    const record = Object.assign(defaultRecord_(m.collection), cleanStateInput_(m.data || {}), { id: id, syncId: Utilities.getUuid(), source: 'site', createdAt: now, updatedAt: now, deletedAt: null });
+    list.push(record);
+    addHistory_(state, record.ideaId || (m.collection === 'ideas' ? id : null), m.collection, id, 'created', 'Created on the site');
+    return { id: id };
+  }
+  const record = list.find(function(x) { return x.id === m.id; });
+  if (!record) throw new Error('That record no longer exists.');
+  if (m.op === 'update') Object.assign(record, cleanStateInput_(m.data || {}), { updatedAt: now });
+  else if (m.op === 'delete') Object.assign(record, { deletedAt: now, updatedAt: now });
+  else if (m.op === 'restore') Object.assign(record, { deletedAt: null, updatedAt: now });
+  else throw new Error('Unknown operation: ' + m.op);
+  return { id: record.id };
+}
+
+function cleanStateInput_(data) {
+  const out = {};
+  Object.keys(data || {}).forEach(function(k) { if (PROTECTED_STATE_FIELDS.indexOf(k) === -1) out[k] = data[k] === '' ? null : data[k]; });
+  return out;
+}
+
+function defaultRecord_(collection) {
+  const defaults = {
+    ideas: { title:'',description:'',horizon:'Short Term',incomeStyle:'Active',opportunityType:'Other',category:'',status:'Exploring',stage:'Discover',details:{} },
+    experiments: { ideaId:null,ideaLabel:'',name:'',status:'Planned' }, sprint: { ideaId:null,day:'',status:'',action:'',deliverable:'' },
+    research: { ideaId:null,kind:'Note',area:'General',title:'',content:'',tags:[] }, competitors: { ideaId:null,name:'Untitled competitor' },
+    assumptions: { ideaId:null,assumption:'New assumption',status:'Unknown' }, barriers: { ideaId:null,type:'capital' },
+    milestones: { ideaId:null,ideaLabel:'',title:'',stage:'Discover',status:'Not Started' }, expenses: { ideaId:null,ideaLabel:'',category:'',item:'' },
+    findings: { ideaId:null,title:'Untitled finding',scope:'Global' }, investments: { name:'',status:'Learn',accountOrAsset:'Asset',passiveLevel:'Low ongoing involvement',riskProfile:{} },
+    investmentExperiments: { investmentId:null,investmentLabel:'',name:'',mode:'Paper',status:'Planned' }
+  };
+  return Object.assign({}, defaults[collection] || {});
+}
+
+function addHistory_(state, ideaId, entityType, entityId, kind, summary) {
+  (state.history || (state.history = [])).unshift({ id: Utilities.getUuid(), ideaId: ideaId || null, entityType: entityType, entityId: entityId, kind: kind, summary: summary, at: new Date().toISOString() });
+  state.history = state.history.slice(0, 400);
+}
+
+function tabsForRecord_(collection, record) {
+  if (collection !== 'ideas') return COLLECTION_TABS[collection] || [];
+  if (record.horizon === 'Both') return ['shortIdeas','longIdeas'];
+  return record.horizon === 'Long Term' ? ['longIdeas'] : ['shortIdeas'];
+}
+
+function recordValues_(key, record) {
+  const values = {};
+  mapFields_(key).forEach(function(f) {
+    let value = record[f.field];
+    if (f.field.indexOf('risk') === 0 && f.app) {
+      const names = { riskMarket:'market',riskPrincipal:'principal',riskCredit:'credit',riskInterestRate:'interestRate',riskInflation:'inflation',riskComplexity:'complexity' };
+      value = record.riskProfile && record.riskProfile[names[f.field]] && record.riskProfile[names[f.field]].level;
+    }
+    if (f.field === 'incomeStyle' && value === 'Passive-ish') value = 'Passive';
+    values[f.header] = value === undefined || value === null ? '' : value;
+  });
+  return values;
+}
+
+function syncMutationToSheets_(state, m, id) {
+  if (!m.collection || !COLLECTION_TABS[m.collection]) return;
+  const record = (state[m.collection] || []).find(function(r) { return r.id === id; });
+  if (!record || !record.syncId) return;
+  const allTabs = COLLECTION_TABS[m.collection];
+  const desired = tabsForRecord_(m.collection, record);
+  const ops = [];
+  allTabs.forEach(function(key) {
+    if (desired.indexOf(key) >= 0 && !record.deletedAt) ops.push({ tab:key, syncId:record.syncId, op:'upsert', values:recordValues_(key, record), restore:m.op === 'restore' });
+    else ops.push({ tab:key, syncId:record.syncId, op:'markDeleted', reason:'site' });
+  });
+  writeOps_(ops);
+}
+
+function parseStateCell_(value, type) {
+  if (value === '' || value === null || value === undefined) return null;
+  if (type === 'n') { const n = Number(value); return isFinite(n) ? n : null; }
+  if (type === 'd') return String(value).slice(0, 10);
+  return String(value);
+}
+
+function reconcileState_(state, selectedTabs) {
+  const keys = Array.isArray(selectedTabs) && selectedTabs.length ? selectedTabs : Object.keys(STATE_TAB_MAPS);
+  let fromSheet = 0, toSheet = 0;
+  state.sheetRows = {};
+  keys.forEach(function(key) {
+    if (!STATE_TAB_MAPS[key]) return;
+    const pulled = pullTab_(key);
+    if (!pulled.found) return;
+    const collection = TAB_COLLECTION[key];
+    const list = state[collection] || (state[collection] = []);
+    const fields = mapFields_(key);
+    pulled.rows.forEach(function(row) {
+      let record = list.find(function(r) { return r.syncId === row.syncId; });
+      if (!record) {
+        record = Object.assign(defaultRecord_(collection), { id:Utilities.getUuid(),syncId:row.syncId,source:'sheet',createdAt:new Date().toISOString(),updatedAt:row.updatedAt || new Date().toISOString(),deletedAt:null });
+        if (collection === 'ideas') record.horizon = key === 'longIdeas' ? 'Long Term' : 'Short Term';
+        list.push(record);
+      }
+      if (row.deleted) record.deletedAt = record.deletedAt || new Date().toISOString();
+      else {
+        record.deletedAt = null;
+        fields.forEach(function(f) {
+          if (f.app || !Object.prototype.hasOwnProperty.call(row.values, f.header)) return;
+          let value = parseStateCell_(row.values[f.header], f.type);
+          if (f.field === 'incomeStyle' && value === 'Passive') value = 'Passive-ish';
+          record[f.field] = value;
+        });
+      }
+      record.updatedAt = row.updatedAt || record.updatedAt;
+      (state.sheetRows[row.syncId] || (state.sheetRows[row.syncId] = [])).push({ tab:key,row:row.row });
+      fromSheet++;
+    });
+    const ops = [];
+    list.forEach(function(record) {
+      if (!record.syncId || tabsForRecord_(collection, record).indexOf(key) < 0) return;
+      ops.push(record.deletedAt ? { tab:key,syncId:record.syncId,op:'markDeleted',reason:'site' } : { tab:key,syncId:record.syncId,op:'upsert',values:recordValues_(key,record) });
+    });
+    if (ops.length) { writeOps_(ops); toSheet += ops.length; }
+  });
+  const g = pullGuardrails_();
+  if (g.found) state.guardrails = Object.assign({}, state.guardrails || {}, g.values || {});
+  state.sync = { status:'synced',lastSyncAt:new Date().toISOString(),lastSuccessAt:new Date().toISOString(),lastError:null,pendingConflicts:0,workbooks:[{key:'short',name:'Short-Term Workbook',found:true},{key:'long',name:'Long-Term Workbook',found:true}] };
+  return { ok:true,fromSheet:fromSheet,toSheet:toSheet };
 }

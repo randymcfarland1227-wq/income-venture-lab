@@ -12,6 +12,7 @@ import { SectionTabs } from "../section-tabs";
 import { OpenInSheet } from "../sheet-link";
 import { useLab } from "../store";
 import { Empty, PageHeader, RecordDialog, SectionHeader, StatusPill, Tag, useRecordDialog } from "../ui";
+import { runtimeApi } from "@/lib/client/runtime-api";
 
 type DataState = { metrics: InvestmentMetric[]; marketQuoteProvider: string; refresh?: { results?: Array<{ provider: string; status: string; error?: string }> } };
 
@@ -28,16 +29,14 @@ export function InvestingPage({ tab = "explore" }: { tab?: string }) {
   const refresh = async (force = false) => {
     setRefreshing(true);
     try {
-      const response = await fetch(`/api/investment-data${force ? "?refresh=1" : ""}`, { cache: "no-store" });
-      const data = await response.json() as DataState & { error?: string };
-      if (response.ok) setLive(data);
+      const data = await runtimeApi.investmentData<DataState>(force);
+      setLive(data);
     } finally { setRefreshing(false); }
   };
   useEffect(() => {
     let active = true;
-    void fetch("/api/investment-data", { cache: "no-store" })
-      .then(response => response.json().then(data => ({ ok: response.ok, data: data as DataState })))
-      .then(({ ok, data }) => { if (active && ok) setLive(data); })
+    void runtimeApi.investmentData<DataState>()
+      .then(data => { if (active) setLive(data); })
       .catch(() => { /* The seeded/cached state remains visible. */ });
     return () => { active = false; };
   }, []);
