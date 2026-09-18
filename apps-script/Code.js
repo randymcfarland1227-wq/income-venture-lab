@@ -1016,12 +1016,9 @@ function reconcileState_(state, selectedTabs) {
       (state.sheetRows[row.syncId] || (state.sheetRows[row.syncId] = [])).push({ tab:key,row:row.row });
       fromSheet++;
     });
-    const ops = [];
-    list.forEach(function(record) {
-      if (!record.syncId || tabsForRecord_(collection, record).indexOf(key) < 0) return;
-      ops.push(record.deletedAt ? { tab:key,syncId:record.syncId,op:'markDeleted',reason:'site' } : { tab:key,syncId:record.syncId,op:'upsert',values:recordValues_(key,record) });
-    });
-    if (ops.length) { writeOps_(ops); toSheet += ops.length; }
+    // Site edits are written to Sheets immediately by syncMutationToSheets_. A
+    // periodic reconcile only pulls user-authoritative columns, keeping startup
+    // fast and never rewriting external/app-owned facts from a Sheet value.
   });
   const g = pullGuardrails_();
   if (g.found) state.guardrails = Object.assign({}, state.guardrails || {}, g.values || {});
