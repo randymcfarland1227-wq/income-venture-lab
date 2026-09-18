@@ -166,7 +166,6 @@ export function LabProvider({ children }: { children: ReactNode }) {
       .then(data => {
         if (!alive) return;
         setState(data);
-        void syncNow();
       })
       .catch(e => { if (alive) setError(e instanceof Error ? e.message : "Could not load the lab."); });
     return () => { alive = false; };

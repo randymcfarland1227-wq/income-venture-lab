@@ -884,6 +884,7 @@ function publicState_(state) {
   });
   out.conflicts = out.conflicts || [];
   out.sheetRows = out.sheetRows || {};
+  if (out.sync && out.sync.status === 'syncing') out.sync.status = out.sync.lastError ? 'error' : 'synced';
   return out;
 }
 
