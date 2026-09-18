@@ -106,10 +106,10 @@ function doGet(e) {
       'const ORIGIN=' + origin + ',SESSION=' + session + ';' +
       'addEventListener("message",function(e){' +
       'if(e.origin!==ORIGIN||!e.data||e.data.type!=="ivl-call"||e.data.session!==SESSION)return;' +
-      'var m=e.data;google.script.run.withSuccessHandler(function(v){parent.postMessage({type:"ivl-result",id:m.id,session:SESSION,ok:true,value:v},ORIGIN)})' +
-      '.withFailureHandler(function(err){parent.postMessage({type:"ivl-result",id:m.id,session:SESSION,ok:false,error:(err&&err.message)||String(err)},ORIGIN)})' +
+      'var m=e.data;google.script.run.withSuccessHandler(function(v){top.postMessage({type:"ivl-result",id:m.id,session:SESSION,ok:true,value:v},ORIGIN)})' +
+      '.withFailureHandler(function(err){top.postMessage({type:"ivl-result",id:m.id,session:SESSION,ok:false,error:(err&&err.message)||String(err)},ORIGIN)})' +
       '.apiBridgeCall({action:m.action,payload:m.payload||{}});' +
-      '});parent.postMessage({type:"ivl-ready",session:SESSION},ORIGIN);</script>';
+      '});top.postMessage({type:"ivl-ready",session:SESSION},ORIGIN);</script>';
     return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   if (params.secret === SYNC_SECRET && params.action) return json_(dispatch_({ action: params.action }));

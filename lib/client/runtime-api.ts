@@ -3,6 +3,7 @@ const IS_GITHUB_PAGES = typeof window !== "undefined" && window.location.hostnam
 
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: number };
 let frame: HTMLIFrameElement | null = null;
+let bridgeWindow: Window | null = null;
 let ready: Promise<void> | null = null;
 let session = "";
 const pending = new Map<string, Pending>();
@@ -18,8 +19,9 @@ function bridgeReady() {
     document.body.appendChild(frame);
     const timeout = window.setTimeout(() => reject(new Error("The Google Sheets connection did not respond. Refresh and try again.")), 20_000);
     window.addEventListener("message", event => {
-      if (event.source !== frame?.contentWindow || event.data?.session !== session) return;
+      if (event.data?.session !== session) return;
       if (event.data.type === "ivl-ready") {
+        bridgeWindow = event.source as Window;
         window.clearTimeout(timeout);
         resolve();
         return;
@@ -45,7 +47,7 @@ async function bridgeCall<T>(action: string, payload: Record<string, unknown> = 
       reject(new Error("The Google Sheets connection timed out."));
     }, 30_000);
     pending.set(id, { resolve: resolve as (value: unknown) => void, reject, timer });
-    frame!.contentWindow!.postMessage({ type: "ivl-call", id, session, action, payload }, "*");
+    bridgeWindow!.postMessage({ type: "ivl-call", id, session, action, payload }, "*");
   });
 }
 
