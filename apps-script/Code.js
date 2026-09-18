@@ -151,6 +151,12 @@ function dispatch_(body) {
         if (!body.state || typeof body.state !== 'object') return { ok: false, error: 'Missing state' };
         saveAppState_(body.state);
         return { ok: true, bytes: JSON.stringify(body.state).length };
+      case 'reconcileState':
+        const state = loadAppState_();
+        if (!state) return { ok: false, error: 'The Lab has not been initialized.' };
+        const result = reconcileState_(state, body.tabs);
+        saveAppState_(state);
+        return { ok: true, result: result };
       default:
         return { ok: false, error: 'Unknown action: ' + body.action };
     }
