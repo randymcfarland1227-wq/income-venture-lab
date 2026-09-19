@@ -50,8 +50,16 @@ function bridgeReady() {
   return ready;
 }
 
-async function bridgeCall<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
-  await bridgeReady();
+async function bridgeCall<T>(action: string, payload: Record<string, unknown> = {}, retries = 1): Promise<T> {
+  try {
+    await bridgeReady();
+  } catch (error) {
+    // Apps Script occasionally starts its embedded bridge slowly after a
+    // deployment or a sleeping browser tab. Retry once with a fresh iframe so
+    // the user does not have to refresh the whole Lab.
+    if (retries > 0) return bridgeCall<T>(action, payload, retries - 1);
+    throw error;
+  }
   const id = crypto.randomUUID();
   return new Promise<T>((resolve, reject) => {
     const timer = window.setTimeout(() => {
