@@ -12,13 +12,8 @@ function bridgeReady() {
   if (ready) return ready;
   ready = new Promise<void>((resolve, reject) => {
     session = crypto.randomUUID();
-    frame = document.createElement("iframe");
-    frame.hidden = true;
-    frame.title = "Income & Venture Lab data connection";
-    frame.src = `${APPS_SCRIPT_URL}?mode=bridge&origin=${encodeURIComponent(window.location.origin)}&session=${encodeURIComponent(session)}`;
-    document.body.appendChild(frame);
-    const timeout = window.setTimeout(() => reject(new Error("The Google Sheets connection did not respond. Refresh and try again.")), 20_000);
-    window.addEventListener("message", event => {
+    let timeout = 0;
+    const onMessage = (event: MessageEvent) => {
       if (event.data?.session !== session) return;
       if (event.data.type === "ivl-ready") {
         bridgeWindow = event.source as Window;
@@ -33,7 +28,24 @@ function bridgeReady() {
       window.clearTimeout(item.timer);
       if (event.data.ok) item.resolve(event.data.value);
       else item.reject(new Error(event.data.error || "The data connection failed."));
-    });
+    };
+
+    // Install the listener before attaching the iframe. A cached Apps Script
+    // bridge can announce itself during the same tick it is appended.
+    window.addEventListener("message", onMessage);
+    frame = document.createElement("iframe");
+    frame.hidden = true;
+    frame.title = "Income & Venture Lab data connection";
+    frame.src = `${APPS_SCRIPT_URL}?mode=bridge&origin=${encodeURIComponent(window.location.origin)}&session=${encodeURIComponent(session)}`;
+    timeout = window.setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      frame?.remove();
+      frame = null;
+      bridgeWindow = null;
+      ready = null;
+      reject(new Error("The Google Sheets connection did not respond. Refresh and try again."));
+    }, 20_000);
+    document.body.appendChild(frame);
   });
   return ready;
 }
