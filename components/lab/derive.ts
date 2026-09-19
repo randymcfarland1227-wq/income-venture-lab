@@ -44,6 +44,13 @@ const n = (v: number | null | undefined) => (typeof v === "number" && Number.isF
 
 export function derive(state: AppState | null): Derived {
   const all = state?.ideas ?? [];
+  // In the Short-Term workbook, "No" is Randy's decision to exclude an idea
+  // from the working Lab. Keep the synced record intact, but do not surface it
+  // in site libraries, counts, search, or financial rollups.
+  const isShortTermNo = (idea: Idea) =>
+    (idea.horizon === "Short Term" || idea.horizon === "Both")
+    && idea.status.trim().toLowerCase() === "no";
+  const visible = all.filter(i => !i.deletedAt && !isShortTermNo(i));
   const experimentsByIdea = group(state?.experiments ?? []);
   const milestonesByIdea = group(state?.milestones ?? []);
   const expensesByIdea = group(state?.expenses ?? []);
@@ -67,7 +74,7 @@ export function derive(state: AppState | null): Derived {
   }
 
   return {
-    ideas: all.filter(i => !i.deletedAt),
+    ideas: visible,
     archived: all.filter(i => i.deletedAt),
     ideaById: new Map(all.map(i => [i.id, i])),
     experimentsByIdea,
