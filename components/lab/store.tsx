@@ -159,13 +159,21 @@ export function LabProvider({ children }: { children: ReactNode }) {
     }
   }, [save]);
 
-  // First load, then an immediate reconcile with the Sheets.
+  // Paint the saved state immediately. If it is stale, reconcile in the
+  // background so an old browser session never remains hours behind Sheets.
   useEffect(() => {
     let alive = true;
     runtimeApi.state<AppState>()
       .then(data => {
         if (!alive) return;
+        const savedAt = Date.parse(data.sync?.lastSuccessAt ?? "") || 0;
+        lastSync.current = savedAt;
         setState(data);
+        if (Date.now() - savedAt > 5 * 60_000) {
+          window.setTimeout(() => {
+            if (alive) void syncNow();
+          }, 250);
+        }
       })
       .catch(e => { if (alive) setError(e instanceof Error ? e.message : "Could not load the lab."); });
     return () => { alive = false; };
@@ -182,10 +190,15 @@ export function LabProvider({ children }: { children: ReactNode }) {
     const onFocus = () => {
       if (Date.now() - lastSync.current > 20_000) void syncNow();
     };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastSync.current > 20_000) void syncNow();
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [state, syncNow]);
 

@@ -273,6 +273,15 @@ function onSheetEdit(e) {
         writeCells_(sheet, first + i, changes);
       });
     });
+
+    // Keep the site's saved state current when a person edits a managed Sheet.
+    // Only the affected tab is reconciled; externally sourced investment facts
+    // remain protected by the field-authority map in reconcileState_.
+    const state = loadAppState_();
+    if (state && entry.tab) {
+      reconcileState_(state, [entry.tab]);
+      saveAppState_(state);
+    }
   } catch (err) {
     console.error('onSheetEdit failed: ' + err);
   }
@@ -1001,7 +1010,19 @@ function parseStateCell_(value, type) {
 function reconcileState_(state, selectedTabs) {
   const keys = Array.isArray(selectedTabs) && selectedTabs.length ? selectedTabs : Object.keys(STATE_TAB_MAPS);
   let fromSheet = 0, toSheet = 0;
-  state.sheetRows = {};
+  const selected = {};
+  keys.forEach(function(key) { selected[key] = true; });
+  if (keys.length === Object.keys(STATE_TAB_MAPS).length) {
+    state.sheetRows = {};
+  } else {
+    // A focused sync must not discard links belonging to the other workbook tabs.
+    const existing = state.sheetRows || {};
+    Object.keys(existing).forEach(function(syncId) {
+      existing[syncId] = (existing[syncId] || []).filter(function(ref) { return !selected[ref.tab]; });
+      if (!existing[syncId].length) delete existing[syncId];
+    });
+    state.sheetRows = existing;
+  }
   keys.forEach(function(key) {
     if (!STATE_TAB_MAPS[key]) return;
     const pulled = pullTab_(key);
