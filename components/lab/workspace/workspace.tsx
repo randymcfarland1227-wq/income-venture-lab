@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  HORIZONS, INCOME_STYLES, MODULES, OPPORTUNITY_TYPES, STAGES, STATUS_SUGGESTIONS, defaultModules, includesLong, includesShort,
+  HORIZONS, INCOME_STYLES, MODULES, OPPORTUNITY_TYPES, STAGES, STATUS_SUGGESTIONS, VENTURE_TRACKS, defaultModules, includesLong, includesShort,
   relativeTime, type Idea, type ModuleKey,
 } from "@/lib/domain";
 import { TABS, type TabKey } from "@/lib/sync/tabs";
@@ -24,6 +24,7 @@ import { CompetitionModule, MarketModule } from "./market";
 import { BarriersModule, BuildModule, ModelModule } from "./model";
 import { FinancialsModule } from "./financials";
 import { ExperimentsModule, ResearchModule, RoadmapModule, ValidationModule } from "./evidence";
+import { BrandModule, BusinessPlanModule, MarketingModule } from "./venture-strategy";
 
 export function Workspace({ ideaId, module }: { ideaId: string; module?: string }) {
   const { data, go, back, update, archive, save } = useLab();
@@ -38,7 +39,7 @@ export function Workspace({ ideaId, module }: { ideaId: string; module?: string 
   const visible = defaultModules(idea);
   const active = (MODULES.some(m => m.key === module) ? module : "overview") as ModuleKey;
   const shown = visible.includes(active) ? visible : [...visible, active];
-  const fallback = includesShort(idea.horizon) ? "short-term" : "long-term";
+  const fallback = idea.ventureTrack === "Idea Vault" ? "ventures/vault" : idea.ventureTrack === "Venture Studio" ? "ventures/studio" : includesShort(idea.horizon) ? "short-term" : "long-term";
 
   const toggleModule = (key: ModuleKey, on: boolean) => {
     const next = on ? [...visible, key] : visible.filter(k => k !== key);
@@ -89,7 +90,10 @@ export function Workspace({ ideaId, module }: { ideaId: string; module?: string 
       </nav>
 
       <div className="module-body">
-        {active === "market" ? <MarketModule idea={idea} />
+        {active === "plan" ? <BusinessPlanModule idea={idea} />
+          : active === "brand" ? <BrandModule idea={idea} />
+          : active === "marketing" ? <MarketingModule idea={idea} />
+          : active === "market" ? <MarketModule idea={idea} />
           : active === "competition" ? <CompetitionModule idea={idea} />
           : active === "model" ? <ModelModule idea={idea} />
           : active === "build" ? <BuildModule idea={idea} />
@@ -125,7 +129,7 @@ function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => voi
   const save = useIdeaSave(idea);
   const health = useSyncHealth();
   const rows = (state?.sheetRows[idea.syncId] ?? []).filter(r => r.tab in TABS) as Array<{ tab: TabKey; row: number | null }>;
-  const expected: TabKey[] = [...(includesShort(idea.horizon) ? ["shortIdeas" as const] : []), ...(includesLong(idea.horizon) ? ["longIdeas" as const] : [])];
+  const expected: TabKey[] = idea.ventureTrack ? [] : [...(includesShort(idea.horizon) ? ["shortIdeas" as const] : []), ...(includesLong(idea.horizon) ? ["longIdeas" as const] : [])];
   const conflicts = (state?.conflicts ?? []).filter(c => c.entityId === idea.id).length;
   const statuses = [...new Set([idea.status, ...STATUS_SUGGESTIONS].filter(Boolean))];
 
@@ -133,6 +137,8 @@ function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => voi
     <header className="workspace-head">
       <div className="min-w-0 flex-1">
         <div className="ws-meta">
+          <MetaSelect label="Venture space" value={idea.ventureTrack ?? "Income Pipeline"} options={["Income Pipeline", ...VENTURE_TRACKS]}
+            onSave={v => save.field("ventureTrack")(v === "Income Pipeline" ? null : v)} />
           <MetaSelect label="Horizon" value={idea.horizon} options={[...HORIZONS]} onSave={save.field("horizon")} />
           <MetaSelect label="Income style" value={idea.incomeStyle} options={[...INCOME_STYLES]} onSave={save.field("incomeStyle")} />
           <MetaSelect label="Opportunity type" value={idea.opportunityType} options={[...OPPORTUNITY_TYPES]} onSave={save.field("opportunityType")} />

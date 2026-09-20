@@ -55,7 +55,7 @@ function Router() {
     case "short-term": return <ShortTermPage tab={route.sub} />;
     case "long-term": return <LongTermPage tab={route.sub} />;
     case "investing": return <InvestingPage tab={route.sub} />;
-    case "ventures": return <VenturesPage />;
+    case "ventures": return <VenturesPage tab={route.sub} />;
     case "passive": return <PassivePage />;
     case "experiments": return <ExperimentsPage />;
     case "financials": return <FinancialsPage />;

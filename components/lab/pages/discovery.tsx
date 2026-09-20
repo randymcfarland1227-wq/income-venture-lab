@@ -43,7 +43,7 @@ export function DiscoveryPage({ tab = "short" }: { tab?: string }) {
 
 function ShortDiscovery() {
   const { data } = useLab();
-  const ideas = useMemo(() => data.ideas.filter(i => includesShort(i.horizon)), [data.ideas]);
+  const ideas = useMemo(() => data.ideas.filter(i => includesShort(i.horizon) && !i.ventureTrack), [data.ideas]);
   const scored = ideas.map(shortScore).filter((s): s is number => s !== null);
   const repaired = ideas.some(i => i.sheetShortScore === null && shortScore(i) !== null);
   return (
@@ -66,7 +66,7 @@ function ShortDiscovery() {
 
 function LongDiscovery() {
   const { data, state, go } = useLab();
-  const ideas = useMemo(() => data.ideas.filter(i => includesLong(i.horizon)), [data.ideas]);
+  const ideas = useMemo(() => data.ideas.filter(i => includesLong(i.horizon) && !i.ventureTrack), [data.ideas]);
   return (
     <div className="grid gap-6">
       <div className="stat-strip">

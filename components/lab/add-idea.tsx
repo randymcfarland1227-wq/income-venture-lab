@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { HORIZONS, INCOME_STYLES, OPPORTUNITY_TYPES } from "@/lib/domain";
+import { HORIZONS, INCOME_STYLES, OPPORTUNITY_TYPES, VENTURE_TRACKS } from "@/lib/domain";
 import { useLab } from "./store";
 
-const EMPTY = { title: "", horizon: "Short Term", incomeStyle: "Active", opportunityType: "Service Business", category: "", description: "" };
+const DESTINATIONS = ["Income Pipeline", ...VENTURE_TRACKS] as const;
+const EMPTY = { title: "", destination: "Income Pipeline", horizon: "Short Term", incomeStyle: "Active", opportunityType: "Service Business", category: "", description: "" };
 
 const HORIZON_HINT: Record<string, string> = {
   "Short Term": "Adds a row to Income Ideas in the short-term workbook.",
@@ -20,7 +21,7 @@ const HORIZON_HINT: Record<string, string> = {
 
 /** Lightweight capture: six fields, everything else waits in the workspace. */
 export function AddIdeaDialog() {
-  const { addIdeaOpen, setAddIdeaOpen, create, go, data } = useLab();
+  const { addIdeaOpen, setAddIdeaOpen, create, go, data, route } = useLab();
   const [draft, setDraft] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
 
@@ -31,6 +32,12 @@ export function AddIdeaDialog() {
 
   const categories = useMemo(() => [...new Set(data.ideas.map(i => i.category).filter(Boolean))].sort(), [data.ideas]);
   const set = (key: keyof typeof EMPTY, value: string) => setDraft(d => ({ ...d, [key]: value }));
+
+  useEffect(() => {
+    if (addIdeaOpen && route.page === "ventures" && !draft.title) {
+      setDraft(d => ({ ...d, destination: route.sub === "vault" ? "Idea Vault" : "Venture Studio", horizon: "Long Term" }));
+    }
+  }, [addIdeaOpen, route.page, route.sub, draft.title]);
 
   // Let an assistant embedded in the browser create ideas, when the page offers that API.
   useEffect(() => {
@@ -44,7 +51,7 @@ export function AddIdeaDialog() {
       inputSchema: {
         type: "object",
         properties: {
-          title: { type: "string" }, horizon: { type: "string", enum: [...HORIZONS] }, incomeStyle: { type: "string", enum: [...INCOME_STYLES] },
+          title: { type: "string" }, destination: { type: "string", enum: [...DESTINATIONS] }, horizon: { type: "string", enum: [...HORIZONS] }, incomeStyle: { type: "string", enum: [...INCOME_STYLES] },
           opportunityType: { type: "string" }, category: { type: "string" }, description: { type: "string" },
         },
         required: ["title", "horizon", "incomeStyle", "opportunityType"],
@@ -52,7 +59,8 @@ export function AddIdeaDialog() {
       },
       annotations: { readOnlyHint: false },
       execute: async (input: Record<string, string>) => {
-        const id = await create("ideas", { ...input, category: input.category || input.opportunityType });
+        const { destination, ...idea } = input;
+        const id = await create("ideas", { ...idea, ventureTrack: destination && destination !== "Income Pipeline" ? destination : null, category: input.category || input.opportunityType });
         if (id) go(`idea/${id}`);
         return { id };
       },
@@ -64,7 +72,8 @@ export function AddIdeaDialog() {
     e.preventDefault();
     if (!draft.title.trim()) return;
     setBusy(true);
-    const id = await create("ideas", { ...draft, category: draft.category.trim() || draft.opportunityType });
+    const { destination, ...idea } = draft;
+    const id = await create("ideas", { ...idea, ventureTrack: destination === "Income Pipeline" ? null : destination, category: draft.category.trim() || draft.opportunityType });
     setBusy(false);
     if (id) {
       setOpen(false);
@@ -87,14 +96,21 @@ export function AddIdeaDialog() {
               <Label htmlFor="idea-title">Idea Name</Label>
               <Input id="idea-title" autoFocus value={draft.title} onChange={e => set("title", e.target.value)} placeholder="e.g. Wedding venue" className="h-11" />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="idea-destination">Where Should This Live?</Label>
+              <select id="idea-destination" value={draft.destination} onChange={e => set("destination", e.target.value)}>
+                {DESTINATIONS.map(d => <option key={d}>{d}</option>)}
+              </select>
+              <span className="form-hint">{draft.destination === "Venture Studio" ? "For a business you are actively developing, with planning, brand, and marketing tools." : draft.destination === "Idea Vault" ? "For a concept worth keeping and exploring without putting it into the income pipeline." : "Syncs with the Short-Term or Long-Term income workbook."}</span>
+            </div>
             <div className="grid gap-5 sm:grid-cols-2">
-              <div className="grid gap-2">
+              {draft.destination === "Income Pipeline" && <div className="grid gap-2">
                 <Label htmlFor="idea-horizon">Horizon</Label>
                 <select id="idea-horizon" value={draft.horizon} onChange={e => set("horizon", e.target.value)}>
                   {HORIZONS.map(h => <option key={h}>{h}</option>)}
                 </select>
                 <span className="form-hint">{HORIZON_HINT[draft.horizon]}</span>
-              </div>
+              </div>}
               <div className="grid gap-2">
                 <Label htmlFor="idea-style">Income Style</Label>
                 <select id="idea-style" value={draft.incomeStyle} onChange={e => set("incomeStyle", e.target.value)}>

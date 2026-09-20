@@ -12,8 +12,12 @@ export type IncomeStyle = (typeof INCOME_STYLES)[number];
 
 export const OPPORTUNITY_TYPES = [
   "Employment / Bridge Income", "Freelance", "Service Business", "Ecommerce", "Reselling",
-  "Digital Product", "Content", "Software", "Asset", "Property", "Investment", "Acquisition", "Other",
+  "Digital Product", "Consumer Product", "Technology Product", "Company Concept", "Content", "Software",
+  "Asset", "Property", "Investment", "Acquisition", "Other",
 ] as const;
+
+export const VENTURE_TRACKS = ["Venture Studio", "Idea Vault"] as const;
+export type VentureTrack = (typeof VENTURE_TRACKS)[number];
 
 export const STAGES = ["Discover", "Validate", "Build", "Launch", "Scale"] as const;
 export const STATUS_SUGGESTIONS = [
@@ -48,6 +52,9 @@ export const BARRIER_TYPES = [
 
 export const MODULES = [
   { key: "overview", label: "Overview" },
+  { key: "plan", label: "Business Plan" },
+  { key: "brand", label: "Brand" },
+  { key: "marketing", label: "Marketing" },
   { key: "market", label: "Market" },
   { key: "competition", label: "Competition" },
   { key: "model", label: "Business Model" },
@@ -78,6 +85,12 @@ export type IdeaDetails = {
   recurring?: string; keyResources?: string; keyActivities?: string; partners?: string;
   barrierSummary?: string;
   distribution?: string; automation?: string; maintenancePlan?: string; buildPlan?: string;
+  businessSummary?: string; mission?: string; vision?: string; offer?: string; advantage?: string;
+  operationsPlan?: string; nearTermGoals?: string; openDecisions?: string;
+  brandPositioning?: string; brandPromise?: string; brandStory?: string; brandPersonality?: string;
+  brandVoice?: string; visualDirection?: string; namingNotes?: string; packagingNotes?: string;
+  primaryAudience?: string; marketingObjectives?: string; channelStrategy?: string; contentPillars?: string;
+  launchPlan?: string; campaignIdeas?: string; partnershipsPlan?: string; marketingMetrics?: string;
   modules?: ModuleKey[];
 };
 
@@ -87,7 +100,7 @@ type Num = number | null;
 export type Idea = Stamped & {
   id: string; syncId: string; title: string; description: string;
   horizon: Horizon; incomeStyle: IncomeStyle; opportunityType: string; category: string;
-  status: string; stage: string; tier: string; sheetRef: Num;
+  status: string; stage: string; tier: string; sheetRef: Num; ventureTrack: VentureTrack | null;
   personalFitAngle: string; howItEarns: string; incomeModel: string; firstCash: string; weeksToFirst: Num;
   startupLow: Num; startupHigh: Num; monthlyCost: Num; weeklyHours: Num; monthlyLow: Num; monthlyHigh: Num;
   maintenanceHours: Num;
@@ -267,10 +280,12 @@ export const includesShort = (h: string) => h === "Short Term" || h === "Both";
 export const includesLong = (h: string) => h === "Long Term" || h === "Both";
 
 const VENTURE_TYPES = new Set([
-  "Service Business", "Ecommerce", "Reselling", "Digital Product", "Content", "Software", "Asset", "Property", "Acquisition",
+  "Service Business", "Ecommerce", "Reselling", "Digital Product", "Consumer Product", "Technology Product", "Company Concept",
+  "Content", "Software", "Asset", "Property", "Acquisition",
 ]);
 
 export const isVenture = (idea: Idea) => VENTURE_TYPES.has(idea.opportunityType);
+export const isShortTermNo = (idea: Idea) => includesShort(idea.horizon) && idea.status.trim().toLowerCase() === "no";
 export const isPassive = (idea: Idea) => idea.incomeStyle === "Passive-ish" || (idea.passivePotential ?? 0) >= 4;
 
 export function passiveGroup(idea: Idea): (typeof PASSIVE_GROUPS)[number] {
@@ -319,6 +334,12 @@ export function inferShortIncomeStyle(category: string): IncomeStyle {
 
 export function defaultModules(idea: Idea): ModuleKey[] {
   if (idea.details.modules?.length) return idea.details.modules;
+  if (idea.ventureTrack === "Venture Studio") {
+    return ["overview", "plan", "brand", "marketing", "market", "competition", "model", "financials", "roadmap", "research"];
+  }
+  if (idea.ventureTrack === "Idea Vault") {
+    return ["overview", "plan", "market", "research"];
+  }
   if (isPassive(idea)) {
     return ["overview", "market", "build", "financials", "validation", "experiments", "research", "competition", "roadmap"];
   }

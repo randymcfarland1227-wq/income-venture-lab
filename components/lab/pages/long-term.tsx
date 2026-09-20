@@ -15,7 +15,7 @@ import { Empty, PageHeader, RecordDialog, SectionHeader, Stat, StatusPill, useRe
 
 export function LongTermPage({ tab = "opportunities" }: { tab?: string }) {
   const { data, state, go } = useLab();
-  const ideas = useMemo(() => data.ideas.filter(i => includesLong(i.horizon)), [data.ideas]);
+  const ideas = useMemo(() => data.ideas.filter(i => includesLong(i.horizon) && !i.ventureTrack), [data.ideas]);
   const belongs = (ideaId: string | null) => {
     const idea = ideaId ? data.ideaById.get(ideaId) : undefined;
     return !idea || includesLong(idea.horizon);

@@ -157,6 +157,32 @@ function dispatch_(body) {
         const result = reconcileState_(state, body.tabs);
         saveAppState_(state);
         return { ok: true, result: result };
+      case 'mutateState': {
+        const mutableState = loadAppState_();
+        if (!mutableState) return { ok: false, error: 'The Lab has not been initialized.' };
+        const mutationResult = mutateState_(mutableState, body.mutation || {});
+        saveAppState_(mutableState);
+        syncMutationToSheets_(mutableState, body.mutation || {}, mutationResult.id);
+        return { ok: true, id: mutationResult.id };
+      }
+      case 'upsertVenture': {
+        const ventureState = loadAppState_();
+        if (!ventureState) return { ok: false, error: 'The Lab has not been initialized.' };
+        const ventureData = body.data || {};
+        const wantedTitle = String(ventureData.title || '').trim();
+        if (!wantedTitle || !ventureData.ventureTrack) return { ok: false, error: 'A title and ventureTrack are required.' };
+        let venture = (ventureState.ideas || []).find(function(item) { return !item.deletedAt && String(item.title || '').trim().toLowerCase() === wantedTitle.toLowerCase(); });
+        let created = false;
+        if (venture) {
+          Object.assign(venture, cleanStateInput_(ventureData), { updatedAt: new Date().toISOString() });
+        } else {
+          const createdResult = mutateState_(ventureState, { op:'create',collection:'ideas',data:ventureData });
+          venture = ventureState.ideas.find(function(item) { return item.id === createdResult.id; });
+          created = true;
+        }
+        saveAppState_(ventureState);
+        return { ok: true, id: venture.id, created: created };
+      }
       default:
         return { ok: false, error: 'Unknown action: ' + body.action };
     }
@@ -950,7 +976,7 @@ function cleanStateInput_(data) {
 
 function defaultRecord_(collection) {
   const defaults = {
-    ideas: { title:'',description:'',horizon:'Short Term',incomeStyle:'Active',opportunityType:'Other',category:'',status:'Exploring',stage:'Discover',details:{} },
+    ideas: { title:'',description:'',horizon:'Short Term',incomeStyle:'Active',opportunityType:'Other',category:'',status:'Exploring',stage:'Discover',ventureTrack:null,details:{} },
     experiments: { ideaId:null,ideaLabel:'',name:'',status:'Planned' }, sprint: { ideaId:null,day:'',status:'',action:'',deliverable:'' },
     research: { ideaId:null,kind:'Note',area:'General',title:'',content:'',tags:[] }, competitors: { ideaId:null,name:'Untitled competitor' },
     assumptions: { ideaId:null,assumption:'New assumption',status:'Unknown' }, barriers: { ideaId:null,type:'capital' },
@@ -990,6 +1016,9 @@ function syncMutationToSheets_(state, m, id) {
   if (!m.collection || !COLLECTION_TABS[m.collection]) return;
   const record = (state[m.collection] || []).find(function(r) { return r.id === id; });
   if (!record || !record.syncId) return;
+  // Venture Studio and Idea Vault records intentionally live in the site only;
+  // they are not income-discovery rows and must not be forced into either workbook.
+  if (m.collection === 'ideas' && record.ventureTrack) return;
   const allTabs = COLLECTION_TABS[m.collection];
   const desired = tabsForRecord_(m.collection, record);
   const ops = [];

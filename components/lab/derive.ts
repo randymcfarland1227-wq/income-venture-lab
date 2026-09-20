@@ -1,6 +1,7 @@
 import type {
   AppState, Assumption, Barrier, Competitor, Experiment, Expense, FinancialModel, Finding, Idea, Milestone, ResearchItem,
 } from "@/lib/domain";
+import { isShortTermNo } from "@/lib/domain";
 
 export type Actuals = {
   revenue: number;
@@ -47,9 +48,6 @@ export function derive(state: AppState | null): Derived {
   // In the Short-Term workbook, "No" is Randy's decision to exclude an idea
   // from the working Lab. Keep the synced record intact, but do not surface it
   // in site libraries, counts, search, or financial rollups.
-  const isShortTermNo = (idea: Idea) =>
-    (idea.horizon === "Short Term" || idea.horizon === "Both")
-    && idea.status.trim().toLowerCase() === "no";
   const visible = all.filter(i => !i.deletedAt && !isShortTermNo(i));
   const experimentsByIdea = group(state?.experiments ?? []);
   const milestonesByIdea = group(state?.milestones ?? []);
@@ -76,7 +74,7 @@ export function derive(state: AppState | null): Derived {
   return {
     ideas: visible,
     archived: all.filter(i => i.deletedAt),
-    ideaById: new Map(all.map(i => [i.id, i])),
+    ideaById: new Map([...visible, ...all.filter(i => i.deletedAt)].map(i => [i.id, i])),
     experimentsByIdea,
     researchByIdea: group(state?.research ?? []),
     competitorsByIdea: group(state?.competitors ?? []),
