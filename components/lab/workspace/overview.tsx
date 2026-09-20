@@ -95,7 +95,7 @@ export function OverviewModule({ idea }: { idea: Idea }) {
           <AccordionItem value="scores">
             <AccordionTrigger className="acc-trigger">
               Scoring Dimensions
-              <span className="acc-aside">{[score !== null && short ? `Short-Term ${score}/100` : null, idea.sheetFitScore !== null && long ? `Fit ${idea.sheetFitScore}/100` : null].filter(Boolean).join(" · ")}</span>
+              <span className="acc-aside">{[score !== null && short ? `Short-Term ${score}/100` : null, typeof idea.sheetFitScore === "number" && long ? `Fit ${idea.sheetFitScore}/100` : null].filter(Boolean).join(" · ")}</span>
             </AccordionTrigger>
             <AccordionContent>
               <p className="mb-4 max-w-2xl text-sm text-muted-foreground">A score assists judgment — it never replaces it. Adjust any dimension; the dimensions stay visible on their own.</p>
@@ -172,4 +172,3 @@ function Glance({ label, value, children }: { label: string; value?: string; chi
     </div>
   );
 }
-
