@@ -15,7 +15,7 @@ export function OpportunitiesPage({ tab = "all" }: { tab?: string }) {
   const { data, go } = useLab();
   const all = data.ideas;
   const near = useMemo(() => all.filter(i => includesShort(i.horizon)), [all]);
-  const long = useMemo(() => all.filter(i => includesLong(i.horizon)), [all]);
+  const long = useMemo(() => all.filter(i => includesLong(i.horizon) && !i.ventureTrack), [all]);
   const passive = useMemo(() => all.filter(isPassive), [all]);
   const career = useMemo(() => all.filter(i => CAREER_TYPES.has(i.opportunityType)), [all]);
   const list = tab === "near-term" ? near : tab === "long-term" ? long : tab === "passive" ? passive : tab === "career" ? career : all;

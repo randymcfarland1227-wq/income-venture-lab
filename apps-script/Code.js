@@ -161,6 +161,8 @@ function dispatch_(body) {
         return migrateLongTermV2_();
       case 'repairLongTermV2':
         return repairLongTermV2_();
+      case 'repairMovedShortTermV2':
+        return repairMovedShortTermV2_();
       case 'mutateState': {
         const mutableState = loadAppState_();
         if (!mutableState) return { ok: false, error: 'The Lab has not been initialized.' };
@@ -356,6 +358,46 @@ function migrateLongTermV2_() {
   });
   const shortResults = prepared.shortOps.length ? writeOps_(prepared.shortOps) : [];
   return { ok:true,alreadyMigrated:prepared.alreadyMigrated,movedToShort:prepared.moved,preservedAsSiteIdeas:prepared.preserved,strategiesCreated:prepared.strategies,shortResults:shortResults };
+}
+
+// Idempotent follow-up for tactical rows moved by migrateLongTermV2_. The old
+// long workbook used statuses that are not valid in the Short-Term table, so
+// normalize those rows and make sure each one physically exists in Income Ideas.
+function repairMovedShortTermV2_() {
+  const prepared = withLock_(function() {
+    const state = loadAppState_();
+    if (!state) throw new Error('The Lab has not been initialized.');
+    const tacticalTitles = {
+      'tutoring / test prep':true, 'pet care / dog walking':true, 'home organizing / move support':true,
+      'handyman / furniture assembly':true, 'reselling / flipping':true,
+    };
+    const allowedStatuses = { 'Shortlist':true, 'Consider':true, 'Research':true, 'Avoid for now':true, 'No':true };
+    const now = new Date().toISOString();
+    const repaired = [];
+    (state.ideas || []).forEach(function(idea) {
+      if (idea.deletedAt || idea.ventureTrack || idea.horizon !== 'Short Term') return;
+      const title = String(idea.title || '').trim().toLowerCase();
+      const cameFromLong = idea.sourceWorkbook === 'long' || idea.sourceSheet === 'Income Options' || idea.sourceSheet === 'Long-Term Strategy';
+      const tactical = idea.category === 'Bridge Income' || idea.category === 'Freelance' || tacticalTitles[title];
+      if (!cameFromLong || !tactical || String(idea.status || '').trim() === 'No') return;
+      if (!allowedStatuses[String(idea.status || '').trim()]) idea.status = 'Consider';
+      if (!String(idea.tier || '').trim()) idea.tier = 'C';
+      if (!String(idea.personalFitAngle || '').trim()) idea.personalFitAngle = idea.description || 'Temporary or bridge-income option.';
+      idea.updatedAt = now;
+      repaired.push(idea);
+    });
+    saveAppState_(state);
+    return repaired.map(function(idea) {
+      return { tab:'shortIdeas',syncId:idea.syncId,op:'upsert',values:recordValues_('shortIdeas', idea) };
+    });
+  });
+  const results = prepared.length ? writeOps_(prepared) : [];
+  return {
+    ok: results.every(function(result) { return result.ok; }),
+    attempted: prepared.length,
+    written: results.filter(function(result) { return result.ok; }).length,
+    results: results,
+  };
 }
 
 function longTermStrategyDefinitions_() {
