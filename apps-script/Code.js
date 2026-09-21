@@ -447,10 +447,18 @@ function repairLongTermV2_() {
       record.sourceSheet = 'Long-Term Strategy';
       record.sourceRow = headerRow + index + 1;
     });
+    const beforeCleanup = (state.ideas || []).length;
+    state.ideas = (state.ideas || []).filter(function(idea) {
+      const title = String(idea.title || '').trim().toLowerCase();
+      const description = String(idea.description || '').trim().toLowerCase();
+      return !(title === 'strategy / path' && description === 'why it matters');
+    });
+    if (state.sheetRows && state.sheetRows._sync_id) delete state.sheetRows._sync_id;
+    const artifactsRemoved = beforeCleanup - state.ideas.length;
     const now = new Date().toISOString();
     state.sync = Object.assign({}, state.sync || {}, { lastRunAt:now,lastSuccessAt:now,lastError:null,health:'synced',sheets:currentSyncSheets_() });
     saveAppState_(state);
-    return { ok:true,headerRow:headerRow,duplicatesCleared:headerRow - 1,strategies:strategies.length };
+    return { ok:true,headerRow:headerRow,duplicatesCleared:headerRow - 1,strategies:strategies.length,artifactsRemoved:artifactsRemoved };
   });
 }
 
