@@ -27,13 +27,13 @@ export function LongTermPage({ tab = "opportunities" }: { tab?: string }) {
   return (
     <>
       <PageHeader
-        eyebrow="Ownership Horizon"
-        title="Long-Term Income"
-        description="Compare opportunities worth validating, building, and compounding over time."
+        eyebrow="1 · 3 · 5 · 10 Years"
+        title="Long-Term Income Strategy"
+        description="Plan durable earning power, owned businesses, income-producing assets, and investments across genuinely long horizons."
         actions={<OpenInSheet tab="longIdeas" />}
       />
       <SectionTabs base="long-term" active={tab} tabs={[
-        ["opportunities", "Opportunities", ideas.length],
+        ["opportunities", "Strategies", ideas.length],
         ["plan", "12-Month Plan", milestones.length],
         ["costs", "Cost Planning", expenses.length],
         ["investing", "Investing & Assets", state?.investments.filter(i => !i.deletedAt).length ?? 0],
@@ -54,11 +54,11 @@ export function LongTermPage({ tab = "opportunities" }: { tab?: string }) {
           <OpportunityLibrary
             ideas={ideas}
             storageKey="long"
-            filters={[FILTERS.status, FILTERS.category, FILTERS.style, FILTERS.stage, FILTERS.startupMax, FILTERS.weeksMax, FILTERS.monthlyMin, FILTERS.skillMin, FILTERS.interestMin, FILTERS.passiveMin, FILTERS.effortMax, FILTERS.fitScoreMin]}
-            sorts={[SORTS.fit, SORTS.potential, SORTS.startup, SORTS.weeks, SORTS.passive, SORTS.recent, SORTS.name]}
+            filters={[FILTERS.status, FILTERS.category, FILTERS.style, FILTERS.startupMax, FILTERS.monthlyMin, FILTERS.passiveMin]}
+            sorts={[SORTS.recent, SORTS.potential, SORTS.startup, SORTS.passive, SORTS.name]}
             columns={LONG_COLUMNS}
             metrics={LONG_METRICS}
-            emptyText="Add a long-term idea here, or add a row to Income Options in the workbook."
+            emptyText="Add a durable strategy here, or add a row to Long-Term Strategy in the workbook."
           />
         )}
     </>

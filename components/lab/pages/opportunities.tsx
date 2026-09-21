@@ -42,6 +42,12 @@ export function OpportunitiesPage({ tab = "all" }: { tab?: string }) {
         ["all", "All", all.length], ["near-term", "Near-Term", near.length], ["long-term", "Long-Term", long.length],
         ["passive", "Passive-ish", passive.length], ["career", "Career & Work", career.length],
       ]} />
+      {tab === "long-term" && <div className="strategy-horizon" aria-label="Long-term planning horizons">
+        <div><span>1 year</span><strong>Build the foundation</strong></div>
+        <div><span>3 years</span><strong>Prove durable income</strong></div>
+        <div><span>5 years</span><strong>Scale ownership</strong></div>
+        <div><span>10 years</span><strong>Create resilience & wealth</strong></div>
+      </div>}
       <OpportunityLibrary ideas={list} storageKey={`opportunities:${tab}`}
         filters={[FILTERS.horizon, FILTERS.style, FILTERS.category, FILTERS.type, FILTERS.stage, FILTERS.status, validationFilter(data.assumptionsByIdea), FILTERS.startupMax, FILTERS.monthlyMin]}
         sorts={[SORTS.recent, SORTS.potential, SORTS.score, SORTS.startup, SORTS.name]}

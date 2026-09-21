@@ -82,20 +82,14 @@ export const SHORT_COLUMNS: Column[] = [
 
 export const LONG_COLUMNS: Column[] = [
   statusCol,
-  { key: "stage", label: "Stage", value: i => i.stage },
+  { key: "role", label: "Strategic Role", value: i => i.strategicRole ?? i.category },
+  { key: "year1", label: "1-Year Foundation", value: i => i.year1 ?? "" },
+  { key: "year3", label: "3-Year Position", value: i => i.year3 ?? "" },
+  { key: "year5", label: "5-Year Outcome", value: i => i.year5 ?? "" },
+  { key: "year10", label: "10-Year Vision", value: i => i.year10 ?? "" },
   { key: "startup", label: "Startup", value: startupMax, render: i => moneyRange(i.startupLow, i.startupHigh, true), numeric: true },
-  { key: "monthlyCost", label: "Monthly Cost", value: i => i.monthlyCost, render: i => money(i.monthlyCost), numeric: true },
-  { key: "weeks", label: "Weeks to $", value: i => i.weeksToFirst, numeric: true },
-  { key: "income", label: "Income Potential", value: i => i.monthlyHigh, render: i => moneyRange(i.monthlyLow, i.monthlyHigh, true), numeric: true },
-  { key: "skillFit", label: "Skill Fit", value: i => i.skillFit, render: i => score(i.skillFit), numeric: true },
-  { key: "interest", label: "Interest", value: i => i.interest, render: i => score(i.interest), numeric: true },
+  { key: "income", label: "Long-Term Monthly Potential", value: i => i.monthlyHigh, render: i => moneyRange(i.monthlyLow, i.monthlyHigh, true), numeric: true },
   { key: "passive", label: "Passive", value: i => i.passivePotential, render: i => score(i.passivePotential), numeric: true },
-  { key: "setup", label: "Setup", value: i => i.setupEffort, render: i => score(i.setupEffort), numeric: true },
-  { key: "ongoing", label: "Ongoing", value: i => i.ongoingEffort, render: i => score(i.ongoingEffort), numeric: true },
-  { key: "sales", label: "Sales", value: i => i.salesEffort, render: i => score(i.salesEffort), numeric: true },
-  { key: "complexity", label: "Complexity", value: i => i.complexity, render: i => score(i.complexity), numeric: true },
-  { key: "effort", label: "Effort", value: effortAverage, render: i => num(effortAverage(i)), numeric: true },
-  { key: "fitScore", label: "Fit /100", value: i => i.sheetFitScore, numeric: true },
 ];
 
 export const MIXED_COLUMNS: Column[] = [
@@ -137,9 +131,9 @@ export const SHORT_METRICS: CardMetric[] = [
 ];
 
 export const LONG_METRICS: CardMetric[] = [
-  { label: "Startup", value: i => moneyRange(i.startupLow, i.startupHigh, true) },
-  { label: "Income Potential", value: i => moneyRange(i.monthlyLow, i.monthlyHigh, true) },
-  { label: "Fit Score", value: i => (i.sheetFitScore !== null ? `${i.sheetFitScore}/100` : "—") },
+  { label: "1-Year", value: i => i.year1 ? "Foundation set" : "Not set" },
+  { label: "5-Year", value: i => i.year5 ? "Outcome defined" : "Not set" },
+  { label: "10-Year", value: i => i.year10 ? "Vision defined" : "Not set" },
 ];
 
 export const PASSIVE_METRICS: CardMetric[] = [

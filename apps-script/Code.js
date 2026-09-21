@@ -43,8 +43,8 @@ const TABS = {
     signature: ['day', 'action', 'deliverable'], keys: ['action', 'deliverable'],
   },
   longIdeas: {
-    workbook: 'long', names: ['Income Options'],
-    signature: ['income path', 'how it earns', 'fit score /100'], keys: ['income path'],
+    workbook: 'long', names: ['Long-Term Strategy', 'Income Options'],
+    signature: ['strategy / path', '1-year foundation', '10-year vision'], keys: ['strategy / path'],
   },
   plan: {
     workbook: 'long', names: ['12-Month Plan'],
@@ -157,6 +157,10 @@ function dispatch_(body) {
         const result = reconcileState_(state, body.tabs);
         saveAppState_(state);
         return { ok: true, result: result };
+      case 'migrateLongTermV2':
+        return migrateLongTermV2_();
+      case 'repairLongTermV2':
+        return repairLongTermV2_();
       case 'mutateState': {
         const mutableState = loadAppState_();
         if (!mutableState) return { ok: false, error: 'The Lab has not been initialized.' };
@@ -224,6 +228,188 @@ function setup() {
   log.push('onEdit triggers installed for both workbooks');
   console.log(log.join('\n'));
   return log;
+}
+
+// One-time conversion from the old medium-term opportunity catalog to a true
+// multi-year strategy sheet. Tactical bridge work moves to Short-Term; detailed
+// business/product ideas remain available on the site; the long workbook becomes
+// the durable 1/3/5/10-year planning source.
+function migrateLongTermV2_() {
+  const prepared = withLock_(function() {
+    const state = loadAppState_();
+    if (!state) throw new Error('The Lab has not been initialized.');
+    if ((state.ideas || []).some(function(i) { return !i.deletedAt && i.source === 'strategy-v2'; })) {
+      return { alreadyMigrated:true, shortOps:[], moved:0, preserved:0, strategies:0 };
+    }
+
+    const now = new Date().toISOString();
+    const normalizeTitle = function(value) { return String(value || '').trim().toLowerCase(); };
+    const tacticalTitles = {
+      'tutoring / test prep':true, 'pet care / dog walking':true, 'home organizing / move support':true,
+      'handyman / furniture assembly':true, 'reselling / flipping':true,
+    };
+    const businessTypes = {
+      'Service Business':true, 'Ecommerce':true, 'Reselling':true, 'Digital Product':true,
+      'Consumer Product':true, 'Technology Product':true, 'Company Concept':true,
+      'Content':true, 'Software':true, 'Acquisition':true,
+    };
+    const shortOps = [];
+    let moved = 0, preserved = 0;
+
+    (state.ideas || []).forEach(function(idea) {
+      if (idea.deletedAt || idea.ventureTrack || idea.horizon !== 'Long Term' || idea.source === 'strategy-v2') return;
+      const title = normalizeTitle(idea.title);
+      const tactical = idea.category === 'Bridge Income' || idea.category === 'Freelance' || tacticalTitles[title];
+      if (tactical) {
+        const duplicate = (state.ideas || []).find(function(other) {
+          return other.id !== idea.id && !other.deletedAt && other.horizon === 'Short Term' && normalizeTitle(other.title) === title;
+        });
+        if (duplicate) {
+          idea.ventureTrack = 'Duplicate Archive';
+          idea.updatedAt = now;
+          preserved++;
+        } else {
+          idea.horizon = 'Short Term';
+          idea.updatedAt = now;
+          shortOps.push({ tab:'shortIdeas',syncId:idea.syncId,op:'upsert',values:recordValues_('shortIdeas', idea) });
+          moved++;
+        }
+      } else {
+        idea.ventureTrack = businessTypes[idea.opportunityType] ? 'Business Ideas' : 'Idea Vault';
+        idea.updatedAt = now;
+        preserved++;
+      }
+    });
+
+    const definitions = longTermStrategyDefinitions_();
+    definitions.forEach(function(def) {
+      const record = Object.assign(defaultRecord_('ideas'), def, {
+        id:Utilities.getUuid(), syncId:Utilities.getUuid(), source:'strategy-v2', sourceWorkbook:'long',
+        sourceSheet:'Long-Term Strategy', sourceRow:null, importedAt:now, horizon:'Long Term', ventureTrack:null,
+        createdAt:now, updatedAt:now, deletedAt:null, details:{},
+      });
+      state.ideas.push(record);
+    });
+
+    const book = SpreadsheetApp.openById(WORKBOOKS.long);
+    const legacySheet = book.getSheetByName('Long-Term Strategy') || book.getSheetByName('Income Options');
+    if (!legacySheet) throw new Error('The long-term strategy tab could not be found.');
+    const backupName = 'Income Options Backup 2026-09-21';
+    if (!book.getSheetByName(backupName)) {
+      legacySheet.copyTo(book).setName(backupName).setTabColor('#9aa7a3');
+    }
+    let legacyName = 'Income Options Legacy Table';
+    let suffix = 2;
+    while (book.getSheetByName(legacyName) && book.getSheetByName(legacyName).getSheetId() !== legacySheet.getSheetId()) legacyName = 'Income Options Legacy Table ' + suffix++;
+    if (legacySheet.getName() !== legacyName) legacySheet.setName(legacyName);
+    const sheet = book.insertSheet('Long-Term Strategy', 0);
+    const headers = [
+      'Strategic Role','Strategy / Path','Why It Matters','Income Engine','Involvement',
+      '1-Year Foundation','3-Year Position','5-Year Outcome','10-Year Vision','Durable Advantage','Key Dependencies',
+      'Starting Capital Low','Starting Capital High','Weekly Hours (Year 1)','Long-Term Monthly Income Low','Long-Term Monthly Income High',
+      'Risk Comfort 1-5','Passive Potential 1-5','Status','Next 12-Month Move','Success Measure','Notes',
+      '_sync_id','_updated_at','_version','_deleted','_source',
+    ];
+    const rows = [headers];
+    definitions.forEach(function(def, index) {
+      const record = state.ideas[state.ideas.length - definitions.length + index];
+      const values = recordValues_('longIdeas', record);
+      rows.push(headers.map(function(header) {
+        const key = normHeader_(header);
+        if (key === '_sync_id') return record.syncId;
+        if (key === '_updated_at') return now;
+        if (key === '_version') return 1;
+        if (key === '_deleted') return false;
+        if (key === '_source') return 'strategy-v2';
+        return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : '';
+      }));
+    });
+
+    const headerRow = 1;
+    definitions.forEach(function(_def, index) {
+      state.ideas[state.ideas.length - definitions.length + index].sourceRow = headerRow + index + 1;
+    });
+    if (sheet.getMaxRows() < headerRow + definitions.length) sheet.insertRowsAfter(sheet.getMaxRows(), headerRow + definitions.length - sheet.getMaxRows());
+    if (sheet.getMaxColumns() < headers.length) sheet.insertColumnsAfter(sheet.getMaxColumns(), headers.length - sheet.getMaxColumns());
+    const width = headers.length;
+    sheet.getRange(headerRow, 1, rows.length, headers.length).setValues(rows);
+    sheet.setFrozenRows(headerRow);
+    sheet.getRange(headerRow, 1, rows.length, 22).createFilter();
+    sheet.getRange(headerRow, 1, 1, width).setBackground('#163f3a').setFontColor('#ffffff').setFontWeight('bold').setWrap(true);
+    sheet.getRange(headerRow + 1, 1, rows.length - 1, 22).setVerticalAlignment('top').setWrap(true);
+    sheet.setRowHeight(headerRow, 42);
+    for (let r = headerRow + 1; r <= headerRow + definitions.length; r++) sheet.setRowHeight(r, 86);
+    [1,4,5,17,18,19].forEach(function(c) { sheet.setColumnWidth(c, 125); });
+    [2,3,6,7,8,9,10,11,20,21,22].forEach(function(c) { sheet.setColumnWidth(c, 230); });
+    [12,13,14,15,16].forEach(function(c) { sheet.setColumnWidth(c, 115); });
+    const statusRule = SpreadsheetApp.newDataValidation().requireValueInList(['Exploring','Focus Now','Building','Running','Paused'], true).setAllowInvalid(false).build();
+    const involvementRule = SpreadsheetApp.newDataValidation().requireValueInList(['Active','Hybrid','Passive-ish'], true).setAllowInvalid(false).build();
+    sheet.getRange(headerRow + 1, 19, rows.length - 1, 1).setDataValidation(statusRule);
+    sheet.getRange(headerRow + 1, 5, rows.length - 1, 1).setDataValidation(involvementRule);
+    headers.forEach(function(h, i) { if (HIDDEN_SYSTEM_COLUMNS.indexOf(normHeader_(h)) !== -1) sheet.hideColumns(i + 1); });
+    PropertiesService.getScriptProperties().setProperty('longTermStrategyGid', String(sheet.getSheetId()));
+
+    state.sync = Object.assign({}, state.sync || {}, { lastRunAt:now,lastSuccessAt:now,lastError:null,health:'synced',sheets:currentSyncSheets_() });
+    addHistory_(state, null, 'system', 'long-term-v2', 'migrated', 'Rebuilt Long-Term Income around 1, 3, 5, and 10-year strategy horizons');
+    saveAppState_(state);
+    return { alreadyMigrated:false, shortOps:shortOps, moved:moved, preserved:preserved, strategies:definitions.length };
+  });
+  const shortResults = prepared.shortOps.length ? writeOps_(prepared.shortOps) : [];
+  return { ok:true,alreadyMigrated:prepared.alreadyMigrated,movedToShort:prepared.moved,preservedAsSiteIdeas:prepared.preserved,strategiesCreated:prepared.strategies,shortResults:shortResults };
+}
+
+function longTermStrategyDefinitions_() {
+  return [
+    { strategicRole:'Primary income',category:'Career & Skills',title:'Career capital and primary income growth',opportunityType:'Employment / Bridge Income',description:'Build dependable earning power, benefits, leverage, and optionality through skills, responsibility, and a strong professional network.',howItEarns:'Salary, benefits, bonuses, and higher-value roles',incomeStyle:'Active',year1:'Choose a durable career direction, close the most valuable skill gap, and stabilize primary income.',year3:'Hold a stronger role with demonstrable results, a wider network, and increased compensation.',year5:'Reach senior or specialized earning power with multiple credible employer or client options.',year10:'Maintain resilient high-value work by choice, with financial independence reducing dependence on any one employer.',durableAdvantage:'Skills, reputation, network, and a documented record of outcomes',dependencies:'Consistent skill development, portfolio proof, relationship building, and market demand',startupLow:0,startupHigh:10000,weeklyHours:40,monthlyLow:5000,monthlyHigh:20000,riskComfort:4,passivePotential:1,status:'Focus Now',firstTest:'Define the next role and the one skill or credential most likely to improve access within 12 months.',successMeasure:'Primary income, benefits, role quality, and the number of viable next-step options',notes:'Temporary gig work belongs in Short-Term; this path is about compounding career value.' },
+    { strategicRole:'Expertise income',category:'Consulting',title:'Specialized consulting or fractional practice',opportunityType:'Service Business',description:'Turn professional expertise into a focused, repeatable offer that can become a durable independent income stream.',howItEarns:'Diagnostics, projects, retainers, and fractional leadership',incomeStyle:'Active',year1:'Choose a niche, define one paid offer, earn initial proof, and build a referral-ready body of work.',year3:'Develop recurring clients, clear positioning, repeatable delivery, and selective pricing power.',year5:'Operate a durable boutique practice or small firm with systems and recurring revenue.',year10:'Own a respected expertise business that can remain intentionally small, scale with a team, or produce licensable IP.',durableAdvantage:'Specialized knowledge, trust, case studies, referrals, and proprietary methods',dependencies:'Credibility, network, demand, sales discipline, delivery capacity, and professional safeguards',startupLow:500,startupHigh:15000,weeklyHours:10,monthlyLow:3000,monthlyHigh:30000,riskComfort:3,passivePotential:2,status:'Exploring',firstTest:'Package one narrow paid diagnostic and validate it with five qualified conversations.',successMeasure:'Recurring client revenue, referral rate, effective hourly value, and concentration risk',notes:'' },
+    { strategicRole:'Business ownership',category:'Owned Business',title:'Owned service business',opportunityType:'Service Business',description:'Build a local or specialized service company whose value comes from recurring demand, operating systems, and eventually a team.',howItEarns:'Recurring service revenue and operating margin',incomeStyle:'Hybrid',year1:'Validate one service, pricing model, customer segment, and reliable acquisition channel.',year3:'Create repeatable operations, recurring customers, and the first dependable delegation layer.',year5:'Own a manager-supported operation with healthy margins and reduced dependence on the founder.',year10:'Hold a durable cash-flow business that can be retained, expanded, or sold.',durableAdvantage:'Local reputation, repeat customers, route density, process quality, and trained people',dependencies:'Demand, hiring, quality control, insurance, licensing, and working capital',startupLow:1000,startupHigh:50000,weeklyHours:15,monthlyLow:5000,monthlyHigh:50000,riskComfort:3,passivePotential:3,status:'Exploring',firstTest:'Select one service-business idea and validate real demand before buying meaningful equipment.',successMeasure:'Recurring revenue, operating margin, owner hours, retention, and documented systems',notes:'Individual service concepts remain in Business Ideas on the site.' },
+    { strategicRole:'Brand ownership',category:'Products & Brands',title:'Peculiar Candle and product-brand portfolio',opportunityType:'Consumer Product',description:'Develop Peculiar Candle as a real brand and use what it teaches to build enduring product, marketing, and customer assets.',howItEarns:'Product margin, repeat purchases, wholesale, and direct-to-consumer sales',incomeStyle:'Hybrid',year1:'Validate the hero products, brand position, unit economics, repeat demand, and a manageable selling rhythm.',year3:'Build repeat customers, reliable production, channel fit, and a recognizable brand identity.',year5:'Operate a profitable product brand with a broader assortment or carefully chosen wholesale presence.',year10:'Own a durable brand or portfolio with systems, intellectual property, loyal customers, and strategic exit options.',durableAdvantage:'Brand meaning, product quality, customer loyalty, formulations, packaging, and distribution',dependencies:'Safe production, margins, demand, cash flow, supply chain, and consistent marketing',startupLow:500,startupHigh:30000,weeklyHours:12,monthlyLow:2000,monthlyHigh:40000,riskComfort:3,passivePotential:2,status:'Building',firstTest:'Finish the Peculiar Candle business plan and validate a small hero collection with paying customers.',successMeasure:'Contribution margin, repeat purchase rate, customer acquisition cost, and founder capacity',notes:'' },
+    { strategicRole:'Intellectual property',category:'Scalable Products',title:'Digital products, education, and licensable IP',opportunityType:'Digital Product',description:'Convert useful knowledge, systems, or creative work into assets that can sell repeatedly without equal growth in delivery hours.',howItEarns:'Product sales, licenses, subscriptions, memberships, or royalties',incomeStyle:'Passive-ish',year1:'Validate one narrow problem and sell a small useful product before building a library.',year3:'Develop a focused catalog, owned audience, and repeatable launch or evergreen sales system.',year5:'Create meaningful recurring or repeatable income from a trusted body of intellectual property.',year10:'Own an adaptable IP portfolio that produces income across channels and can support other businesses.',durableAdvantage:'Original frameworks, audience trust, product library, distribution, and accumulated customer insight',dependencies:'Real usefulness, discoverability, audience access, maintenance, and intellectual-property discipline',startupLow:100,startupHigh:15000,weeklyHours:8,monthlyLow:500,monthlyHigh:25000,riskComfort:3,passivePotential:5,status:'Exploring',firstTest:'Pre-sell one narrowly defined template, toolkit, class, or guide to a specific audience.',successMeasure:'Sales per asset, repeat buyers, owned audience growth, and maintenance hours',notes:'' },
+    { strategicRole:'Technology ownership',category:'Software',title:'Software, automation, or technology product',opportunityType:'Technology Product',description:'Build or own a focused technology product that solves a persistent problem and can create recurring revenue or strategic value.',howItEarns:'Subscriptions, licenses, usage fees, or acquisition value',incomeStyle:'Hybrid',year1:'Choose one real problem, secure design partners, and validate willingness to pay before a large build.',year3:'Reach product-market evidence with retained users, reliable operations, and a focused product.',year5:'Operate a durable software business or valuable technology asset with recurring revenue.',year10:'Own a mature technology product, portfolio, or intellectual property with strategic sale or continuing-income options.',durableAdvantage:'Product insight, customer workflows, data, integrations, code, and switching costs',dependencies:'Technical capability, security, distribution, support, retention, and ongoing development',startupLow:500,startupHigh:75000,weeklyHours:10,monthlyLow:1000,monthlyHigh:50000,riskComfort:2,passivePotential:4,status:'Exploring',firstTest:'Interview five target users and secure a paid manual or no-code pilot before engineering deeply.',successMeasure:'Retention, recurring revenue, support burden, gross margin, and product usage',notes:'Smart Mirror can remain an invention concept until its problem and business case are clear.' },
+    { strategicRole:'Audience asset',category:'Media & Audience',title:'Owned audience and media asset',opportunityType:'Content',description:'Build direct access to a defined audience that can support sponsorships, products, services, memberships, and future ventures.',howItEarns:'Sponsorships, memberships, affiliates, products, and qualified demand for other offers',incomeStyle:'Hybrid',year1:'Choose a useful editorial focus, publish consistently, and establish an owned email audience.',year3:'Develop audience trust, repeatable distribution, and two complementary monetization methods.',year5:'Operate a meaningful media or community asset with diversified revenue and owned customer relationships.',year10:'Own a recognized audience platform that supports a portfolio of products, businesses, or investments.',durableAdvantage:'Trust, archives, subscriber relationships, brand recognition, and distribution',dependencies:'Consistency, distinct point of view, audience need, platform diversification, and measurement',startupLow:100,startupHigh:20000,weeklyHours:8,monthlyLow:500,monthlyHigh:30000,riskComfort:3,passivePotential:3,status:'Exploring',firstTest:'Publish a six-piece minimum viable series and track qualified subscribers rather than views alone.',successMeasure:'Owned subscribers, retention, engagement quality, revenue diversity, and content reuse',notes:'' },
+    { strategicRole:'Asset income',category:'Income-Producing Assets',title:'Income-producing physical assets and rental operations',opportunityType:'Asset',description:'Own useful physical assets that generate rental or usage income with clear maintenance, insurance, and utilization economics.',howItEarns:'Rental fees and asset utilization',incomeStyle:'Hybrid',year1:'Test demand using one existing, borrowed, or low-cost asset and document true net economics.',year3:'Own a focused set of well-utilized assets with reliable booking, deposits, and maintenance systems.',year5:'Operate a diversified asset portfolio with disciplined replacement and risk controls.',year10:'Hold a durable income-producing asset base that complements businesses and investments.',durableAdvantage:'Local demand knowledge, utilization data, reliable operations, asset quality, and customer trust',dependencies:'Capital, storage, insurance, damage controls, maintenance, regulation, and utilization',startupLow:500,startupHigh:100000,weeklyHours:5,monthlyLow:500,monthlyHigh:15000,riskComfort:3,passivePotential:4,status:'Exploring',firstTest:'Choose one asset category and validate paid demand without purchasing a large inventory.',successMeasure:'Net yield on asset cost, utilization, damage/loss rate, maintenance hours, and payback period',notes:'Vending, equipment, vehicles, and space should be evaluated by net economics—not labeled passive by default.' },
+    { strategicRole:'Property wealth',category:'Real Estate',title:'Real-estate ownership and property income',opportunityType:'Property',description:'Use carefully selected property ownership to build long-duration cash flow, equity, inflation resilience, or strategic flexibility.',howItEarns:'Net rent, amortization, and long-term appreciation',incomeStyle:'Passive-ish',year1:'Build readiness: credit, reserves, market knowledge, underwriting discipline, and clear buy criteria.',year3:'Own only if a property meets conservative cash-flow, reserve, legal, and lifestyle requirements.',year5:'Stabilize operations and decide whether to hold one strong asset or deliberately expand.',year10:'Hold a resilient property position that contributes cash flow and equity without endangering liquidity.',durableAdvantage:'Patient underwriting, favorable basis, financing discipline, operational competence, and time',dependencies:'Capital, credit, reserves, location, regulation, insurance, repairs, vacancy, and management',startupLow:15000,startupHigh:250000,weeklyHours:3,monthlyLow:0,monthlyHigh:10000,riskComfort:2,passivePotential:4,status:'Exploring',firstTest:'Define conservative purchase criteria and analyze ten realistic properties including vacancy, repairs, taxes, and reserves.',successMeasure:'Cash-on-cash return, debt coverage, reserves, vacancy, equity, and owner time',notes:'' },
+    { strategicRole:'Financial assets',category:'Investing',title:'Diversified long-term investment portfolio',opportunityType:'Investment',description:'Build a diversified portfolio aligned with liquidity needs, risk capacity, taxes, and long-term independence rather than short-term income pressure.',howItEarns:'Interest, dividends, and long-term capital appreciation',incomeStyle:'Passive-ish',year1:'Protect emergency liquidity, define an investment policy, use appropriate accounts, and establish sustainable contributions.',year3:'Maintain consistent contributions and a diversified allocation through different market conditions.',year5:'Grow a meaningful invested base while keeping fees, taxes, concentration, and behavior under control.',year10:'Hold a substantial diversified portfolio that increases choice and reduces dependence on earned income.',durableAdvantage:'Time, diversification, low costs, tax efficiency, discipline, and consistent contributions',dependencies:'Surplus cash flow, emergency reserves, risk capacity, appropriate accounts, and a sound policy',startupLow:0,startupHigh:100000,weeklyHours:1,monthlyLow:0,monthlyHigh:10000,riskComfort:3,passivePotential:5,status:'Focus Now',firstTest:'Write a simple investment policy and confirm the emergency-fund and account sequence before increasing risk.',successMeasure:'Savings rate, invested assets, diversification, fees, progress to independence, and adherence to policy',notes:'Market levels and yields remain externally sourced in the Investing & Assets Lab.' },
+    { strategicRole:'Acquisition',category:'Business Ownership',title:'Acquire an existing cash-flowing business',opportunityType:'Acquisition',description:'Purchase an operating company only when its earnings quality, financing, risks, and operational demands are deeply understood.',howItEarns:'Operating cash flow, debt paydown, and enterprise value growth',incomeStyle:'Hybrid',year1:'Learn acquisition economics, lender requirements, diligence, and operator fit without rushing to transact.',year3:'Build capital, advisory relationships, and a disciplined acquisition thesis; review real opportunities.',year5:'Acquire only if a business meets strict earnings-quality, concentration, financing, and operating criteria.',year10:'Own a strong operating company or small portfolio with professional systems and multiple strategic options.',durableAdvantage:'Purchased customer base, proven operations, seller knowledge, disciplined underwriting, and operational improvement',dependencies:'Capital, financing, diligence, legal and accounting support, leadership ability, and deal quality',startupLow:25000,startupHigh:750000,weeklyHours:10,monthlyLow:5000,monthlyHigh:75000,riskComfort:1,passivePotential:3,status:'Exploring',firstTest:'Review twenty listings and speak with a lender and acquisition professional before treating this as actionable.',successMeasure:'Quality of earnings, debt coverage, customer concentration, owner dependence, and return on invested capital',notes:'' },
+    { strategicRole:'Portfolio design',category:'Whole Income System',title:'Resilient multi-stream income portfolio',opportunityType:'Other',description:'Coordinate primary work, owned businesses, scalable assets, and investments so no single source has to carry the entire financial future.',howItEarns:'A deliberate mix of earned, business, asset, and investment income',incomeStyle:'Hybrid',year1:'Stabilize the base, choose one primary build path, protect liquidity, and stop scattering effort across too many experiments.',year3:'Maintain dependable primary income plus one proven secondary engine and consistent investing.',year5:'Increase the share of income and net worth coming from owned businesses and assets without weakening resilience.',year10:'Reach a balanced position where work is increasingly chosen and several durable engines support the household.',durableAdvantage:'Diversification across income types, coordinated capital allocation, and years of accumulated proof',dependencies:'Focus, cash-flow discipline, regular review, risk limits, and sequencing one build at a time',startupLow:0,startupHigh:100000,weeklyHours:5,monthlyLow:0,monthlyHigh:100000,riskComfort:4,passivePotential:4,status:'Focus Now',firstTest:'Choose the one primary path and one supporting financial habit for the next 12 months.',successMeasure:'Income concentration, savings rate, owned-asset income, liquidity, net worth, and hours required',notes:'This is the coordinating strategy—not another project competing for attention.' },
+  ];
+}
+
+function repairLongTermV2_() {
+  return withLock_(function() {
+    const state = loadAppState_();
+    if (!state) throw new Error('The Lab has not been initialized.');
+    const book = SpreadsheetApp.openById(WORKBOOKS.long);
+    const sheet = book.getSheetByName('Long-Term Strategy');
+    if (!sheet) throw new Error('Long-Term Strategy was not found.');
+    const scanRows = Math.min(20, sheet.getLastRow());
+    const scanCols = Math.min(30, sheet.getLastColumn());
+    const grid = sheet.getRange(1, 1, scanRows, scanCols).getDisplayValues();
+    let headerRow = 0;
+    grid.some(function(row, index) {
+      const normalized = row.map(normHeader_);
+      if (normalized.indexOf('strategy / path') >= 0 && normalized.indexOf('10-year vision') >= 0 && index > 0) {
+        headerRow = index + 1;
+        return true;
+      }
+      return false;
+    });
+    if (!headerRow) throw new Error('The native strategy table header was not found.');
+    if (headerRow > 1) {
+      sheet.getRange(1, 1, headerRow - 1, scanCols).clearContent().clearFormat();
+      sheet.hideRows(1, headerRow - 1);
+    }
+    sheet.setFrozenRows(headerRow);
+    const strategies = (state.ideas || []).filter(function(i) { return !i.deletedAt && i.source === 'strategy-v2'; });
+    strategies.forEach(function(record, index) {
+      record.sourceSheet = 'Long-Term Strategy';
+      record.sourceRow = headerRow + index + 1;
+    });
+    const now = new Date().toISOString();
+    state.sync = Object.assign({}, state.sync || {}, { lastRunAt:now,lastSuccessAt:now,lastError:null,health:'synced',sheets:currentSyncSheets_() });
+    saveAppState_(state);
+    return { ok:true,headerRow:headerRow,duplicatesCleared:headerRow - 1,strategies:strategies.length };
+  });
 }
 
 function installTriggers_() {
@@ -856,7 +1042,7 @@ function columnLetter_(col) {
 // accepted from Sheets; verified external/calculated data always wins.
 const STATE_TAB_MAPS = {
   shortIdeas: ['status:status:t','tier:tier:t','category:category:t','opportunity:title:t','personal fit / angle:personalFitAngle:t','first cash:firstCash:t','startup cost:startupLow:n','weekly hrs:weeklyHours:n','income model:incomeModel:t','low monthly:monthlyLow:n','high monthly:monthlyHigh:n','speed 1-5:speed:n','fit 1-5:fit:n','demand 1-5:demand:n','scale 1-5:scale:n','low cost 1-5:lowCost:n','low risk 1-5:lowRisk:n','score /100:sheetShortScore:n:app','first test:firstTest:t'],
-  longIdeas: ['category:category:t','income path:title:t','how it earns:howItEarns:t','style:incomeStyle:t','startup low:startupLow:n','startup high:startupHigh:n','monthly cost:monthlyCost:n','weeks to first $:weeksToFirst:n','hours / week:weeklyHours:n','monthly income low:monthlyLow:n','monthly income high:monthlyHigh:n','skill fit 1-5:skillFit:n','interest 1-5:interest:n','risk comfort 1-5:riskComfort:n','passive potential 1-5:passivePotential:n','setup effort 1-5:setupEffort:n','ongoing effort 1-5:ongoingEffort:n','sales effort 1-5:salesEffort:n','complexity 1-5:complexity:n','overall effort 1-5:overallEffort:n:app','fit score /100:sheetFitScore:n:app','status:status:t','first low-cost test:firstTest:t','notes:notes:t'],
+  longIdeas: ['strategic role:strategicRole:t','strategy / path:title:t','why it matters:description:t','income engine:howItEarns:t','involvement:incomeStyle:t','1-year foundation:year1:t','3-year position:year3:t','5-year outcome:year5:t','10-year vision:year10:t','durable advantage:durableAdvantage:t','key dependencies:dependencies:t','starting capital low:startupLow:n','starting capital high:startupHigh:n','weekly hours (year 1):weeklyHours:n','long-term monthly income low:monthlyLow:n','long-term monthly income high:monthlyHigh:n','risk comfort 1-5:riskComfort:n','passive potential 1-5:passivePotential:n','status:status:t','next 12-month move:firstTest:t','success measure:successMeasure:t','notes:notes:t'],
   experiments: ['idea:ideaLabel:t','status:status:t','start date:startDate:d','decision date:decisionDate:d','hypothesis:hypothesis:t','test action:testAction:t','budget:budget:n','hours:actualHours:n','leads:leads:n','replies:replies:n','sales:sales:n','revenue:revenue:n','direct cost:directCosts:n','net cash:sheetNetCash:n:app','net $/hr:sheetNetHourly:n:app','decision / learning:learning:t'],
   sprint: ['day:day:t','status:status:t','action:action:t','deliverable:deliverable:t','time:time:t','cost cap:costCap:n','success signal:successSignal:t','result / notes:resultNotes:t'],
   plan: ['month:month:n','income path:ideaLabel:t','stage:stage:t','milestone / hypothesis:title:t','target date:targetDate:d','time budget hrs:timeBudget:n','spending cap:spendingCap:n','target monthly income:targetIncome:n','actual monthly income:actualIncome:n','status:status:t','next action:nextAction:t','evidence / decision notes:evidenceNotes:t'],
@@ -868,7 +1054,14 @@ const STATE_TAB_MAPS = {
 const TAB_COLLECTION = { shortIdeas: 'ideas', longIdeas: 'ideas', experiments: 'experiments', sprint: 'sprint', plan: 'milestones', costs: 'expenses', investments: 'investments', investmentExperiments: 'investmentExperiments' };
 const COLLECTION_TABS = { ideas: ['shortIdeas', 'longIdeas'], experiments: ['experiments'], sprint: ['sprint'], milestones: ['plan'], expenses: ['costs'], investments: ['investments'], investmentExperiments: ['investmentExperiments'] };
 const PROTECTED_STATE_FIELDS = ['id','syncId','createdAt','updatedAt','deletedAt','source','sourceWorkbook','sourceSheet','sourceRow','importedAt','sheetRef','sheetShortScore','sheetFitScore','overallEffort','sheetNetCash','sheetNetHourly','currentMetric','currentValue','observationDate','dataSource','ytdPct','oneYearPct','fiveYearAnnualizedPct','currentPrice','returnDollars','returnPct','lastRefreshed','riskProfile'];
-const SYNC_SHEETS = { shortIdeas:{sheetName:'Income Ideas',gid:302757590},longIdeas:{sheetName:'Income Options',gid:126322697},experiments:{sheetName:'Short Term Income Tracker',gid:29828859},sprint:{sheetName:'Actualizing Template',gid:1884519258},plan:{sheetName:'12-Month Plan',gid:401181688},costs:{sheetName:'Cost Planner',gid:1272715874},investments:{sheetName:'Investing & Assets',gid:777753465},investmentExperiments:{sheetName:'Investment Experiments',gid:97191746},guardrails:{sheetName:'Instructions',gid:1324825440} };
+const SYNC_SHEETS = { shortIdeas:{sheetName:'Income Ideas',gid:302757590},longIdeas:{sheetName:'Long-Term Strategy',gid:126322697},experiments:{sheetName:'Short Term Income Tracker',gid:29828859},sprint:{sheetName:'Actualizing Template',gid:1884519258},plan:{sheetName:'12-Month Plan',gid:401181688},costs:{sheetName:'Cost Planner',gid:1272715874},investments:{sheetName:'Investing & Assets',gid:777753465},investmentExperiments:{sheetName:'Investment Experiments',gid:97191746},guardrails:{sheetName:'Instructions',gid:1324825440} };
+
+function currentSyncSheets_() {
+  const sheets = JSON.parse(JSON.stringify(SYNC_SHEETS));
+  const gid = Number(PropertiesService.getScriptProperties().getProperty('longTermStrategyGid') || 0);
+  if (gid) sheets.longIdeas.gid = gid;
+  return sheets;
+}
 
 function mapFields_(key) {
   return (STATE_TAB_MAPS[key] || []).map(function(spec) {
@@ -931,7 +1124,7 @@ function publicState_(state) {
     health: out.sync && out.sync.lastError ? 'error' : 'synced',
     openConflicts: (out.conflicts || []).length,
     editorUrl: 'https://script.google.com/d/1V40wOjW0D5BJ5SrpStBrOdJRpFAMP2nxod5oNhy8KJ0JK3l9mbYM4Ruo/edit',
-    sheets: Object.assign({}, SYNC_SHEETS, (out.sync && out.sync.sheets) || {})
+    sheets: Object.assign({}, currentSyncSheets_(), (out.sync && out.sync.sheets) || {})
   });
   return out;
 }
@@ -1087,6 +1280,6 @@ function reconcileState_(state, selectedTabs) {
   const g = pullGuardrails_();
   if (g.found) state.guardrails = Object.assign({}, state.guardrails || {}, g.values || {});
   const syncedAt = new Date().toISOString();
-  state.sync = Object.assign({}, state.sync || {}, { configured:true,health:'synced',lastRunAt:syncedAt,lastSuccessAt:syncedAt,lastError:null,openConflicts:0,sheets:SYNC_SHEETS });
+  state.sync = Object.assign({}, state.sync || {}, { configured:true,health:'synced',lastRunAt:syncedAt,lastSuccessAt:syncedAt,lastError:null,openConflicts:0,sheets:currentSyncSheets_() });
   return { ok:true,fromSheet:fromSheet,toSheet:toSheet };
 }

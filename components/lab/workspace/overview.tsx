@@ -42,6 +42,23 @@ export function OverviewModule({ idea }: { idea: Idea }) {
         </div>
       </section>
 
+      {long && (idea.year1 || idea.year3 || idea.year5 || idea.year10) && (
+        <section className="ws-card span-3">
+          <p className="eyebrow">Long-Term Strategy</p>
+          <h2 className="panel-title mt-2">Build the path across years</h2>
+          <div className="strategy-timeline mt-5">
+            {[["1", "Foundation", idea.year1], ["3", "Position", idea.year3], ["5", "Outcome", idea.year5], ["10", "Vision", idea.year10]].map(([year, label, value]) => (
+              <div key={year} className="strategy-year"><span className="strategy-year-num">{year}</span><small>Year {year} · {label}</small><p>{value || "Not defined yet"}</p></div>
+            ))}
+          </div>
+          <div className="detail-grid three mt-5">
+            <div className="detail-field"><Editable label="Durable advantage" value={idea.durableAdvantage} onSave={save.field("durableAdvantage")} placeholder="What compounds or becomes harder to copy?" /></div>
+            <div className="detail-field"><Editable label="Key dependencies" value={idea.dependencies} onSave={save.field("dependencies")} placeholder="What must be true for this path to work?" /></div>
+            <div className="detail-field"><Editable label="Success measure" value={idea.successMeasure} onSave={save.field("successMeasure")} placeholder="How will you know this is working?" /></div>
+          </div>
+        </section>
+      )}
+
       <section className="ws-card">
         <p className="eyebrow">Assumptions at a Glance</p>
         <dl className="glance-list">

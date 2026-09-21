@@ -109,6 +109,8 @@ export type Idea = Stamped & {
   setupEffort: Num; ongoingEffort: Num; salesEffort: Num; complexity: Num;
   overallEffort: Num; sheetShortScore: Num; sheetFitScore: Num;
   firstTest: string; notes: string; details: IdeaDetails;
+  strategicRole?: string; year1?: string; year3?: string; year5?: string; year10?: string;
+  durableAdvantage?: string; dependencies?: string; successMeasure?: string;
   source: string; sourceWorkbook: string | null; sourceSheet: string | null; sourceRow: Num; importedAt: string | null;
 };
 
@@ -285,7 +287,7 @@ const VENTURE_TYPES = new Set([
 ]);
 
 export const isVenture = (idea: Idea) => VENTURE_TYPES.has(idea.opportunityType);
-export const isShortTermNo = (idea: Idea) => includesShort(idea.horizon) && idea.status.trim().toLowerCase() === "no";
+export const isShortTermNo = (idea: Idea) => includesShort(idea.horizon) && String(idea.status ?? "").trim().toLowerCase() === "no";
 export const isPassive = (idea: Idea) => idea.incomeStyle === "Passive-ish" || (idea.passivePotential ?? 0) >= 4;
 
 export function passiveGroup(idea: Idea): (typeof PASSIVE_GROUPS)[number] {
