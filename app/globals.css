@@ -702,7 +702,8 @@ button.link-chip:hover { background: #d9e7e1; }
 
 /* ---------- Responsive ---------- */
 @media (min-width: 768px) { .lab-header { padding: 0 2rem; } .lab-main { padding: 2.5rem 2.25rem 5rem; } }
-@media (min-width: 1100px) { .area-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .lab-main { padding-inline: 2.75rem; } }
+@media (min-width: 1100px) { .lab-main { padding-inline: 2.75rem; } }
+@media (min-width: 1300px) { .area-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 1100px) {
   .overview-lower, .fin-layout { grid-template-columns: 1fr; }
   .workspace-head { flex-direction: column; gap: 1.25rem; }
