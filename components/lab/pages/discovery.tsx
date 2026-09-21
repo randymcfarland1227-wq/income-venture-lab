@@ -15,13 +15,14 @@ const firstTest: Column = { key: "firstTest", label: "First Test", value: i => i
 const notes: Column = { key: "notes", label: "Notes", value: i => i.notes };
 
 export function DiscoveryPage({ tab = "short" }: { tab?: string }) {
-  const { state } = useLab();
+  const { state, go } = useLab();
   return (
     <>
       <PageHeader
-        eyebrow="The Intellectual Layer"
+        eyebrow="Research & Experiments"
         title="Discovery Library"
         description="The thinking behind both workbooks — original catalogs, scores, guardrails, and the conclusions you have drawn across opportunities."
+        actions={<button type="button" className="research-link" onClick={() => go("experiments")}>Open Experiments →</button>}
       />
       <SectionTabs base="discovery" active={tab} tabs={[
         ["short", "Short-Term Discovery"],

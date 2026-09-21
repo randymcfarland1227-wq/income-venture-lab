@@ -2,8 +2,8 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import {
-  Archive, BarChart3, BriefcaseBusiness, CircleDollarSign, FlaskConical, Gauge, Landmark, LibraryBig, Loader2, PieChart, Plus,
-  Moon, RefreshCw, Search, Sparkles, Sun,
+  Archive, BarChart3, BriefcaseBusiness, FlaskConical, Gauge, Lightbulb, Loader2, PieChart, Plus,
+  Moon, RefreshCw, Search, Shapes, Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -17,14 +17,12 @@ import { useLab } from "./store";
 
 export const NAV = [
   { path: "overview", label: "Overview", icon: Gauge },
-  { path: "short-term", label: "Short-Term Income", icon: CircleDollarSign },
-  { path: "ventures", label: "Business & Ventures", icon: BriefcaseBusiness },
-  { path: "passive", label: "Passive Income", icon: Sparkles },
-  { path: "long-term", label: "Long-Term Income", icon: Landmark },
+  { path: "opportunities", label: "Opportunities", icon: Shapes },
+  { path: "businesses", label: "Businesses", icon: BriefcaseBusiness },
+  { path: "ideas", label: "Ideas & Inventions", icon: Lightbulb },
   { path: "investing", label: "Investing & Assets", icon: PieChart },
-  { path: "experiments", label: "Experiments", icon: FlaskConical },
+  { path: "experiments", label: "Research & Experiments", icon: FlaskConical },
   { path: "financials", label: "Income & Financials", icon: BarChart3 },
-  { path: "discovery", label: "Discovery Library", icon: LibraryBig },
 ] as const;
 
 export const HEALTH_LABEL: Record<SyncHealth, string> = {
@@ -58,7 +56,9 @@ function LabSidebar() {
   const { route, section, go, state } = useLab();
   const { setOpenMobile, isMobile } = useSidebar();
   // Keep the originating section highlighted while an idea workspace is open.
-  const active = route.page === "idea" || route.page === "investment" ? section : route.page;
+  const legacy: Record<string, string> = { "short-term": "opportunities", "long-term": "opportunities", passive: "opportunities", ventures: "businesses", discovery: "experiments" };
+  const current = route.page === "idea" || route.page === "investment" ? section : route.page;
+  const active = legacy[current] ?? current;
 
   const navigate = (path: string) => {
     go(path);

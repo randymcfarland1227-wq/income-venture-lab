@@ -7,11 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { HORIZONS, INCOME_STYLES, OPPORTUNITY_TYPES, VENTURE_TRACKS } from "@/lib/domain";
+import { HORIZONS, INCOME_STYLES, OPPORTUNITY_TYPES } from "@/lib/domain";
 import { useLab } from "./store";
 
-const DESTINATIONS = ["Income Pipeline", ...VENTURE_TRACKS] as const;
-const EMPTY = { title: "", destination: "Income Pipeline", horizon: "Short Term", incomeStyle: "Active", opportunityType: "Service Business", category: "", description: "" };
+const DESTINATIONS = ["Opportunity", "Active Business", "Idea or Invention"] as const;
+const TRACK_FOR_DESTINATION: Record<string, "Venture Studio" | "Idea Vault" | null> = {
+  Opportunity: null, "Active Business": "Venture Studio", "Idea or Invention": "Idea Vault",
+};
+const EMPTY = { title: "", destination: "Opportunity", horizon: "Short Term", incomeStyle: "Active", opportunityType: "Service Business", category: "", description: "" };
 
 const HORIZON_HINT: Record<string, string> = {
   "Short Term": "Adds a row to Income Ideas in the short-term workbook.",
@@ -34,8 +37,9 @@ export function AddIdeaDialog() {
   const set = (key: keyof typeof EMPTY, value: string) => setDraft(d => ({ ...d, [key]: value }));
 
   useEffect(() => {
-    if (addIdeaOpen && route.page === "ventures" && !draft.title) {
-      setDraft(d => ({ ...d, destination: route.sub === "vault" ? "Idea Vault" : "Venture Studio", horizon: "Long Term" }));
+    if (addIdeaOpen && !draft.title) {
+      if (route.page === "businesses" || route.page === "ventures") setDraft(d => ({ ...d, destination: "Active Business", horizon: "Long Term" }));
+      if (route.page === "ideas") setDraft(d => ({ ...d, destination: "Idea or Invention", horizon: "Long Term" }));
     }
   }, [addIdeaOpen, route.page, route.sub, draft.title]);
 
@@ -60,7 +64,7 @@ export function AddIdeaDialog() {
       annotations: { readOnlyHint: false },
       execute: async (input: Record<string, string>) => {
         const { destination, ...idea } = input;
-        const id = await create("ideas", { ...idea, ventureTrack: destination && destination !== "Income Pipeline" ? destination : null, category: input.category || input.opportunityType });
+        const id = await create("ideas", { ...idea, ventureTrack: TRACK_FOR_DESTINATION[destination] ?? null, category: input.category || input.opportunityType });
         if (id) go(`idea/${id}`);
         return { id };
       },
@@ -73,7 +77,7 @@ export function AddIdeaDialog() {
     if (!draft.title.trim()) return;
     setBusy(true);
     const { destination, ...idea } = draft;
-    const id = await create("ideas", { ...idea, ventureTrack: destination === "Income Pipeline" ? null : destination, category: draft.category.trim() || draft.opportunityType });
+    const id = await create("ideas", { ...idea, ventureTrack: TRACK_FOR_DESTINATION[destination] ?? null, category: draft.category.trim() || draft.opportunityType });
     setBusy(false);
     if (id) {
       setOpen(false);
@@ -101,10 +105,10 @@ export function AddIdeaDialog() {
               <select id="idea-destination" value={draft.destination} onChange={e => set("destination", e.target.value)}>
                 {DESTINATIONS.map(d => <option key={d}>{d}</option>)}
               </select>
-              <span className="form-hint">{draft.destination === "Venture Studio" ? "For a business you are actively developing, with planning, brand, and marketing tools." : draft.destination === "Idea Vault" ? "For a concept worth keeping and exploring without putting it into the income pipeline." : "Syncs with the Short-Term or Long-Term income workbook."}</span>
+              <span className="form-hint">{draft.destination === "Active Business" ? "For a company or brand you are actively developing, with planning, brand, and marketing tools." : draft.destination === "Idea or Invention" ? "For a concept worth keeping and exploring without forcing it into an income plan." : "A flexible opportunity that can appear in near-term, long-term, career, or passive-ish views."}</span>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
-              {draft.destination === "Income Pipeline" && <div className="grid gap-2">
+              {draft.destination === "Opportunity" && <div className="grid gap-2">
                 <Label htmlFor="idea-horizon">Horizon</Label>
                 <select id="idea-horizon" value={draft.horizon} onChange={e => set("horizon", e.target.value)}>
                   {HORIZONS.map(h => <option key={h}>{h}</option>)}

@@ -30,9 +30,10 @@ export function ExperimentsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Evidence Engine"
-        title="Experiments"
-        description="Every promising idea gets a small test, a budget, and a decision date. Track net results — not optimistic revenue."
+        eyebrow="Learn Before You Commit"
+        title="Research & Experiments"
+        description="Collect what you learn, test the strongest assumptions, and make decisions from evidence instead of enthusiasm alone."
+        actions={<div className="flex flex-wrap gap-2"><button type="button" className="research-link" onClick={() => go("short-term/experiments")}>Short-Term Tracker</button><button type="button" className="research-link" onClick={() => go("discovery")}>Discovery Library →</button></div>}
       />
       <div className="stat-strip mb-8">
         <Stat label="Running" value={totals.running} />

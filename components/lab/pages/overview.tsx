@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { ArrowUpRight, BriefcaseBusiness, CircleDollarSign, FlaskConical, History, Landmark, Sparkles } from "lucide-react";
+import { ArrowUpRight, BriefcaseBusiness, FlaskConical, History, Lightbulb, PieChart, Shapes } from "lucide-react";
 import {
-  includesLong, includesShort, isPassive, isVenture, money, relativeTime, shortDate, shortScore, type Idea,
+  isVenture, money, relativeTime, shortDate, shortScore, type Idea,
 } from "@/lib/domain";
 import { HEALTH_LABEL, SyncDot, useSyncHealth } from "../shell";
 import { useLab } from "../store";
@@ -31,51 +31,51 @@ export function OverviewPage() {
       + (shortScore(i) ?? i.sheetFitScore ?? 0);
     const top = (list: Idea[]) => [...list].sort((a, b) => rank(b) - rank(a)).slice(0, 2).map(i => i.title);
 
-    const short = ideas.filter(i => includesShort(i.horizon));
     const ventures = ideas.filter(isVenture);
-    const passive = ideas.filter(isPassive);
-    const long = ideas.filter(i => includesLong(i.horizon));
-    const shortTotals = sum(short);
+    const activeBusinesses = ventures.filter(i => i.ventureTrack === "Venture Studio" || ADVANCED.has(i.stage) || /validated|building|earning/i.test(i.status));
+    const savedIdeas = ideas.filter(i => i.ventureTrack === "Idea Vault");
+    const totals = sum(ideas);
+    const investments = state?.investments ?? [];
 
     return [
       {
-        path: "short-term", title: "Short-Term Income", icon: CircleDollarSign, tone: "coral", cta: "Open Short-Term Lab",
-        count: short.length,
+        path: "opportunities", title: "Opportunities", icon: Shapes, tone: "coral", cta: "See the Whole Picture",
+        count: ideas.length,
         lines: [
-          `${running(short)} being tested`,
-          shortTotals.revenue || shortTotals.net ? `${money(shortTotals.revenue)} revenue · ${money(shortTotals.net)} net` : "No revenue recorded yet",
+          `${running(ideas)} being tested`,
+          totals.revenue || totals.net ? `${money(totals.revenue)} revenue · ${money(totals.net)} net` : "Near-term, long-term, career & passive-ish",
         ],
-        examples: top(short.filter(i => i.status !== "Avoid for now")),
+        examples: top(ideas.filter(i => i.status !== "Avoid for now")),
       },
       {
-        path: "ventures", title: "Business & Ventures", icon: BriefcaseBusiness, tone: "blue", cta: "Explore Ventures",
-        count: ventures.length,
+        path: "businesses", title: "Businesses", icon: BriefcaseBusiness, tone: "blue", cta: "Open Business Workspaces",
+        count: activeBusinesses.length,
         lines: [
           `${ventures.filter(researched).length} under active research`,
-          `${ventures.filter(i => ADVANCED.has(i.stage) || /validated|building/i.test(i.status)).length} validated or building`,
+          `${activeBusinesses.length} active or building`,
         ],
-        examples: top(ventures),
+        examples: top(activeBusinesses),
       },
       {
-        path: "passive", title: "Passive Income", icon: Sparkles, tone: "gold", cta: "Open Passive Lab",
-        count: passive.length,
+        path: "ideas", title: "Ideas & Inventions", icon: Lightbulb, tone: "gold", cta: "Explore the Idea Space",
+        count: savedIdeas.length,
         lines: [
-          `${passive.filter(researched).length} under research`,
-          `${running(passive)} experiment${running(passive) === 1 ? "" : "s"} running`,
+          `${savedIdeas.filter(researched).length} being explored`,
+          "No pressure to force an income route",
         ],
-        examples: top(passive),
+        examples: top(savedIdeas),
       },
       {
-        path: "long-term", title: "Long-Term Income", icon: Landmark, tone: "violet", cta: "Explore Long-Term",
-        count: long.length,
+        path: "investing", title: "Investing & Assets", icon: PieChart, tone: "violet", cta: "Open Investing Lab",
+        count: investments.length,
         lines: [
-          `${long.filter(i => i.stage === "Discover").length} in discovery`,
-          `${long.filter(i => i.stage === "Validate" || i.stage === "Build").length} in validation or build`,
+          `${investments.filter(i => /own|paper trial/i.test(i.status)).length} owned or in trial`,
+          "Market facts stay externally authoritative",
         ],
-        examples: top(long),
+        examples: investments.slice(0, 2).map(i => i.name),
       },
     ];
-  }, [ideas, data]);
+  }, [ideas, data, state?.investments]);
 
   const recent = useMemo(() => [...ideas].sort((a, b) => (b.updatedAt > a.updatedAt ? 1 : -1)).slice(0, 6), [ideas]);
   const activity = (state?.history ?? []).filter(h => h.entityType !== "system").slice(0, 5);
@@ -87,9 +87,9 @@ export function OverviewPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Your Income Ecosystem"
-        title="Turn Possibilities Into Evidence."
-        description="Every path stays visible. Open any area — or any idea — when it earns a closer look."
+        eyebrow="Your Opportunity Ecosystem"
+        title="One place to see what matters now."
+        description="Ideas can overlap without getting lost. Start with the whole picture, then move into the workspace that matches what you need to do next."
         actions={
           <button type="button" className="sync-chip" onClick={() => go("sync")}>
             <SyncDot health={health} /> {HEALTH_LABEL[health]}

@@ -8,8 +8,6 @@ import { LabProvider, useLab } from "./store";
 import { OverviewPage } from "./pages/overview";
 import { ShortTermPage } from "./pages/short-term";
 import { LongTermPage } from "./pages/long-term";
-import { VenturesPage } from "./pages/ventures";
-import { PassivePage } from "./pages/passive";
 import { ExperimentsPage } from "./pages/experiments";
 import { FinancialsPage } from "./pages/financials";
 import { DiscoveryPage } from "./pages/discovery";
@@ -18,6 +16,9 @@ import { ArchivePage } from "./pages/archive";
 import { Workspace } from "./workspace/workspace";
 import { InvestingPage } from "./pages/investing";
 import { InvestmentWorkspace } from "./workspace/investment-workspace";
+import { OpportunitiesPage } from "./pages/opportunities";
+import { BusinessesPage } from "./pages/businesses";
+import { IdeasInventionsPage } from "./pages/ideas-inventions";
 
 export function IncomeLab() {
   return (
@@ -52,11 +53,15 @@ function Router() {
   switch (route.page) {
     case "idea": return <Workspace ideaId={route.id ?? ""} module={route.module} />;
     case "investment": return <InvestmentWorkspace investmentId={route.id ?? ""} module={route.module} />;
-    case "short-term": return <ShortTermPage tab={route.sub} />;
-    case "long-term": return <LongTermPage tab={route.sub} />;
+    case "opportunities": return <OpportunitiesPage tab={route.sub} />;
+    case "businesses": return <BusinessesPage tab={route.sub} />;
+    case "ideas": return <IdeasInventionsPage tab={route.sub} />;
+    // Preserve old bookmarks while routing them into the new unified lenses.
+    case "short-term": return route.sub ? <ShortTermPage tab={route.sub} /> : <OpportunitiesPage tab="near-term" />;
+    case "long-term": return route.sub ? <LongTermPage tab={route.sub} /> : <OpportunitiesPage tab="long-term" />;
+    case "passive": return <OpportunitiesPage tab="passive" />;
+    case "ventures": return <BusinessesPage tab={route.sub === "vault" ? "ideas" : route.sub === "pipeline" ? "ideas" : "active"} />;
     case "investing": return <InvestingPage tab={route.sub} />;
-    case "ventures": return <VenturesPage tab={route.sub} />;
-    case "passive": return <PassivePage />;
     case "experiments": return <ExperimentsPage />;
     case "financials": return <FinancialsPage />;
     case "discovery": return <DiscoveryPage tab={route.sub} />;
