@@ -25,6 +25,8 @@ export const DEFAULT_METRICS: CardMetric[] = [
 export function IdeaCard({ idea, metrics = DEFAULT_METRICS }: { idea: Idea; metrics?: CardMetric[] }) {
   const { go, data } = useLab();
   const running = data.actuals.get(idea.id)?.running ?? 0;
+  const summary = (idea.description || idea.personalFitAngle || idea.howItEarns || "Ready for a thesis and a first low-cost test.")
+    .replace(/income-opportunity pipeline/gi, "income plan");
   return (
     <button type="button" onClick={() => go(`idea/${idea.id}`)} className="idea-card">
       <div className="flex items-start justify-between gap-3">
@@ -35,7 +37,7 @@ export function IdeaCard({ idea, metrics = DEFAULT_METRICS }: { idea: Idea; metr
       </div>
       <h3 className="idea-card-title">{idea.title}</h3>
       <StatusPill status={idea.status} />
-      <p className="idea-card-desc">{idea.description || idea.personalFitAngle || idea.howItEarns || "Ready for a thesis and a first low-cost test."}</p>
+      <p className="idea-card-desc">{summary}</p>
       <dl className="card-metrics">
         {metrics.map(m => (
           <div key={m.label}>
