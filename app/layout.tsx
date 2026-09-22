@@ -5,9 +5,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Income & Venture Lab",
   description: "Explore, test, and develop income opportunities in one connected workspace.",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#ff914d",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 

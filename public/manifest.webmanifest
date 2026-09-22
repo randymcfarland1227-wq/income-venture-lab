@@ -1,0 +1,25 @@
+{
+  "name": "Income and Venture Lab",
+  "short_name": "Venture Lab",
+  "description": "Explore, test, and develop income opportunities in one connected workspace.",
+  "id": "/income-venture-lab/",
+  "start_url": "/income-venture-lab/",
+  "scope": "/income-venture-lab/",
+  "display": "standalone",
+  "background_color": "#ff914d",
+  "theme_color": "#ff914d",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
