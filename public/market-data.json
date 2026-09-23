@@ -1,0 +1,260 @@
+{
+  "metrics": [
+    {
+      "id": "fred-sp500:inv-sp500-benchmark:level:2026-09-22",
+      "investmentId": "inv-sp500-benchmark",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.751Z",
+      "provider": "fred-sp500",
+      "sourceName": "FRED / S&P Dow Jones Indices LLC",
+      "sourceUrl": "https://fred.stlouisfed.org/series/SP500",
+      "methodology": "S&P 500 daily closing price index. Returns are price returns and exclude dividends.",
+      "isDelayed": true,
+      "isStale": false,
+      "metric": "level",
+      "value": 7764.64,
+      "unit": "index points"
+    },
+    {
+      "id": "fred-sp500:inv-sp500-benchmark:daily_pct:2026-09-22",
+      "investmentId": "inv-sp500-benchmark",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.751Z",
+      "provider": "fred-sp500",
+      "sourceName": "FRED / S&P Dow Jones Indices LLC",
+      "sourceUrl": "https://fred.stlouisfed.org/series/SP500",
+      "methodology": "S&P 500 daily closing price index. Returns are price returns and exclude dividends.",
+      "isDelayed": true,
+      "isStale": false,
+      "metric": "daily_pct",
+      "value": -0.0007727278581226571,
+      "unit": "percent"
+    },
+    {
+      "id": "fred-sp500:inv-sp500-benchmark:ytd_pct:2026-09-22",
+      "investmentId": "inv-sp500-benchmark",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.751Z",
+      "provider": "fred-sp500",
+      "sourceName": "FRED / S&P Dow Jones Indices LLC",
+      "sourceUrl": "https://fred.stlouisfed.org/series/SP500",
+      "methodology": "S&P 500 daily closing price index. Returns are price returns and exclude dividends.",
+      "isDelayed": true,
+      "isStale": false,
+      "metric": "ytd_pct",
+      "value": 13.426922795997376,
+      "unit": "percent"
+    },
+    {
+      "id": "fred-sp500:inv-sp500-benchmark:one_year_pct:2026-09-22",
+      "investmentId": "inv-sp500-benchmark",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.751Z",
+      "provider": "fred-sp500",
+      "sourceName": "FRED / S&P Dow Jones Indices LLC",
+      "sourceUrl": "https://fred.stlouisfed.org/series/SP500",
+      "methodology": "S&P 500 daily closing price index. Returns are price returns and exclude dividends.",
+      "isDelayed": true,
+      "isStale": false,
+      "metric": "one_year_pct",
+      "value": 15.998356676003734,
+      "unit": "percent"
+    },
+    {
+      "id": "fred-sp500:inv-sp500-benchmark:five_year_annualized_pct:2026-09-22",
+      "investmentId": "inv-sp500-benchmark",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.751Z",
+      "provider": "fred-sp500",
+      "sourceName": "FRED / S&P Dow Jones Indices LLC",
+      "sourceUrl": "https://fred.stlouisfed.org/series/SP500",
+      "methodology": "S&P 500 daily closing price index. Returns are price returns and exclude dividends.",
+      "isDelayed": true,
+      "isStale": false,
+      "metric": "five_year_annualized_pct",
+      "value": 12.052059089903121,
+      "unit": "percent"
+    },
+    {
+      "id": "us-treasury-yield-curve:inv-tbill:3_month_yield:2026-09-22",
+      "investmentId": "inv-tbill",
+      "metric": "3_month_yield",
+      "value": 4.16,
+      "unit": "percent",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.141Z",
+      "provider": "us-treasury-yield-curve",
+      "sourceName": "U.S. Department of the Treasury",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve",
+      "methodology": "Daily Treasury par yield curve rate.",
+      "isDelayed": true,
+      "isStale": false
+    },
+    {
+      "id": "us-treasury-yield-curve:inv-tbill:1_year_yield:2026-09-22",
+      "investmentId": "inv-tbill",
+      "metric": "1_year_yield",
+      "value": 4.43,
+      "unit": "percent",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.141Z",
+      "provider": "us-treasury-yield-curve",
+      "sourceName": "U.S. Department of the Treasury",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve",
+      "methodology": "Daily Treasury par yield curve rate.",
+      "isDelayed": true,
+      "isStale": false
+    },
+    {
+      "id": "us-treasury-yield-curve:inv-tnote:2_year_yield:2026-09-22",
+      "investmentId": "inv-tnote",
+      "metric": "2_year_yield",
+      "value": 4.71,
+      "unit": "percent",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.141Z",
+      "provider": "us-treasury-yield-curve",
+      "sourceName": "U.S. Department of the Treasury",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve",
+      "methodology": "Daily Treasury par yield curve rate.",
+      "isDelayed": true,
+      "isStale": false
+    },
+    {
+      "id": "us-treasury-yield-curve:inv-tnote:10_year_yield:2026-09-22",
+      "investmentId": "inv-tnote",
+      "metric": "10_year_yield",
+      "value": 4.96,
+      "unit": "percent",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.141Z",
+      "provider": "us-treasury-yield-curve",
+      "sourceName": "U.S. Department of the Treasury",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve",
+      "methodology": "Daily Treasury par yield curve rate.",
+      "isDelayed": true,
+      "isStale": false
+    },
+    {
+      "id": "us-treasury-yield-curve:inv-tbond:30_year_yield:2026-09-22",
+      "investmentId": "inv-tbond",
+      "metric": "30_year_yield",
+      "value": 5.29,
+      "unit": "percent",
+      "observationDate": "2026-09-22",
+      "fetchedAt": "2026-09-23T03:31:30.141Z",
+      "provider": "us-treasury-yield-curve",
+      "sourceName": "U.S. Department of the Treasury",
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve",
+      "methodology": "Daily Treasury par yield curve rate.",
+      "isDelayed": true,
+      "isStale": false
+    },
+    {
+      "id": "treasurydirect-savings-bonds:inv-ibond:i_bond_composite_rate:2026-05-01",
+      "investmentId": "inv-ibond",
+      "metric": "i_bond_composite_rate",
+      "value": 4.26,
+      "unit": "percent",
+      "observationDate": "2026-05-01",
+      "fetchedAt": "2026-09-23T03:31:30.101Z",
+      "provider": "treasurydirect-savings-bonds",
+      "sourceName": "TreasuryDirect",
+      "sourceUrl": "https://www.treasurydirect.gov/savings-bonds/i-bonds/i-bonds-interest-rates/",
+      "methodology": "Current issue rate for bonds issued May 1, 2026 to October 31, 2026.",
+      "isDelayed": false,
+      "isStale": false
+    },
+    {
+      "id": "treasurydirect-savings-bonds:inv-eebond:ee_bond_rate:2026-05-01",
+      "investmentId": "inv-eebond",
+      "metric": "ee_bond_rate",
+      "value": 2.4,
+      "unit": "percent",
+      "observationDate": "2026-05-01",
+      "fetchedAt": "2026-09-23T03:31:30.101Z",
+      "provider": "treasurydirect-savings-bonds",
+      "sourceName": "TreasuryDirect",
+      "sourceUrl": "https://www.treasurydirect.gov/savings-bonds/ee-bonds/",
+      "methodology": "Current issue rate for bonds issued May 1, 2026 to October 31, 2026.",
+      "isDelayed": false,
+      "isStale": false
+    },
+    {
+      "id": "bls-cpi:context-inflation:cpi_12_month_change:2026-08-01",
+      "investmentId": "context-inflation",
+      "metric": "cpi_12_month_change",
+      "value": 3.3965478924364856,
+      "unit": "percent",
+      "observationDate": "2026-08-01",
+      "fetchedAt": "2026-09-23T03:31:30.200Z",
+      "provider": "bls-cpi",
+      "sourceName": "U.S. Bureau of Labor Statistics",
+      "sourceUrl": "https://www.bls.gov/cpi/",
+      "methodology": "12-month percent change in CPI-U, U.S. city average, all items, not seasonally adjusted (CUUR0000SA0).",
+      "isDelayed": true,
+      "isStale": false
+    }
+  ],
+  "sources": [
+    {
+      "provider": "fred-sp500",
+      "status": "healthy",
+      "lastAttemptAt": "2026-09-23T03:31:29.702Z",
+      "lastSuccessAt": "2026-09-23T03:31:29.702Z",
+      "lastError": null,
+      "staleAfterMinutes": 720,
+      "sourceUrl": "https://fred.stlouisfed.org/series/SP500"
+    },
+    {
+      "provider": "us-treasury-yield-curve",
+      "status": "healthy",
+      "lastAttemptAt": "2026-09-23T03:31:29.787Z",
+      "lastSuccessAt": "2026-09-23T03:31:29.787Z",
+      "lastError": null,
+      "staleAfterMinutes": 1440,
+      "sourceUrl": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve"
+    },
+    {
+      "provider": "treasurydirect-savings-bonds",
+      "status": "healthy",
+      "lastAttemptAt": "2026-09-23T03:31:29.789Z",
+      "lastSuccessAt": "2026-09-23T03:31:29.789Z",
+      "lastError": null,
+      "staleAfterMinutes": 10080,
+      "sourceUrl": "https://www.treasurydirect.gov/savings-bonds/"
+    },
+    {
+      "provider": "bls-cpi",
+      "status": "healthy",
+      "lastAttemptAt": "2026-09-23T03:31:29.791Z",
+      "lastSuccessAt": "2026-09-23T03:31:29.791Z",
+      "lastError": null,
+      "staleAfterMinutes": 10080,
+      "sourceUrl": "https://www.bls.gov/cpi/"
+    }
+  ],
+  "rules": [],
+  "marketQuoteProvider": "Official public sources refreshed via GitHub Action; licensed security quotes not configured.",
+  "refresh": {
+    "results": [
+      {
+        "provider": "fred-sp500",
+        "status": "ok"
+      },
+      {
+        "provider": "us-treasury-yield-curve",
+        "status": "ok"
+      },
+      {
+        "provider": "treasurydirect-savings-bonds",
+        "status": "ok"
+      },
+      {
+        "provider": "bls-cpi",
+        "status": "ok"
+      }
+    ],
+    "marketQuoteProvider": "Official public sources refreshed via GitHub Action; licensed security quotes not configured."
+  }
+}

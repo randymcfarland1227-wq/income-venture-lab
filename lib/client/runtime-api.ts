@@ -1,6 +1,9 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcOb6BTqpOjaJIpKDzDacrfW2BYZr1m8weymvNt91iuSsRcWS7aEShAYY1QLid2Xc-nQ/exec";
 const IS_GITHUB_PAGES = typeof window !== "undefined" && window.location.hostname.endsWith("github.io");
 
+/** GitHub Pages site base path (vite.pages.config.ts base). */
+const PAGES_BASE = "/income-venture-lab/";
+
 type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: number };
 let frame: HTMLIFrameElement | null = null;
 let bridgeWindow: Window | null = null;
@@ -78,6 +81,12 @@ async function localJson<T>(url: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
+/** Primary market-data path on GitHub Pages: static JSON refreshed by Actions. */
+async function pagesMarketData<T>(force = false): Promise<T> {
+  const url = `${PAGES_BASE}market-data.json${force ? `?t=${Date.now()}` : ""}`;
+  return localJson<T>(url, { cache: "no-store" });
+}
+
 export const runtimeApi = {
   state: <T>() => IS_GITHUB_PAGES ? bridgeCall<T>("state") : localJson<T>("/api/state", { cache: "no-store" }),
   mutate: <T>(mutation: unknown) => IS_GITHUB_PAGES
@@ -86,7 +95,16 @@ export const runtimeApi = {
   sync: <T>(action: string, tabs?: unknown) => IS_GITHUB_PAGES
     ? bridgeCall<T>("sync", { action, tabs })
     : localJson<T>("/api/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, tabs }) }),
-  investmentData: <T>(force = false) => IS_GITHUB_PAGES
-    ? bridgeCall<T>("investmentData", { force })
-    : localJson<T>(`/api/investment-data${force ? "?refresh=1" : ""}`, { cache: "no-store" }),
+  investmentData: async <T>(force = false): Promise<T> => {
+    if (!IS_GITHUB_PAGES) {
+      return localJson<T>(`/api/investment-data${force ? "?refresh=1" : ""}`, { cache: "no-store" });
+    }
+    // Primary: committed public/market-data.json (copied into Pages build).
+    // Fallback: Apps Script bridge only if the static file cannot be loaded.
+    try {
+      return await pagesMarketData<T>(force);
+    } catch {
+      return bridgeCall<T>("investmentData", { force });
+    }
+  },
 };
