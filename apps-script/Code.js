@@ -1141,109 +1141,25 @@ function apiBridgeCall(request) {
   throw new Error('Unknown application action: ' + action);
 }
 
-const STATE_SHEET_NAME = '_IVL_AppState';
-const STATE_SPREADSHEET_ID = '';
-const STATE_CELL_CHUNK = 2000;
-// Filled app state JSON on Drive (avoids Script Properties ~500KB quota).
-const STATE_DRIVE_FILE_ID = '1IRG1Ai7_KRaB0YqR9V-yqRkjqfnt736C'; // filled offline JSON; sheet is primary
-
-function getStateSheet_() {
-  if (STATE_SPREADSHEET_ID) {
-    return SpreadsheetApp.openById(STATE_SPREADSHEET_ID).getSheets()[0];
-  }
-  const ss = SpreadsheetApp.openById(WORKBOOKS.long);
-  let sheet = ss.getSheetByName(STATE_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(STATE_SHEET_NAME);
-    try { sheet.hideSheet(); } catch (e) {}
-  }
-  return sheet;
-}
-
-function clearPropertyState_() {
-  const props = PropertiesService.getScriptProperties();
-  const oldCount = Number(props.getProperty(STATE_PREFIX + 'count') || 0);
-  for (let i = 0; i < oldCount; i++) props.deleteProperty(STATE_PREFIX + i);
-  props.deleteProperty(STATE_PREFIX + 'count');
-}
-
-function loadAppStateFromProperties_() {
+function loadAppState_() {
   const props = PropertiesService.getScriptProperties();
   const count = Number(props.getProperty(STATE_PREFIX + 'count') || 0);
   if (!count) return null;
   let json = '';
   for (let i = 0; i < count; i++) json += props.getProperty(STATE_PREFIX + i) || '';
-  if (!json) return null;
   return JSON.parse(json);
 }
 
-function loadAppStateFromDrive_() {
-  if (!STATE_DRIVE_FILE_ID) return null;
-  try {
-    const file = DriveApp.getFileById(STATE_DRIVE_FILE_ID);
-    const json = file.getBlob().getDataAsString();
-    if (!json) return null;
-    return JSON.parse(json);
-  } catch (e) {
-    return null;
-  }
-}
-
-function loadAppStateFromSheet_() {
-  try {
-    const sheet = getStateSheet_();
-    const last = sheet.getLastRow();
-    if (last < 2) return null;
-    const vals = sheet.getRange(2, 2, last, 2).getValues();
-    let json = '';
-    for (let i = 0; i < vals.length; i++) json += vals[i][0] || '';
-    if (!json) return null;
-    return JSON.parse(json);
-  } catch (e) {
-    return null;
-  }
-}
-
-function loadAppState_() {
-  const fromSheet = loadAppStateFromSheet_();
-  if (fromSheet) {
-    try { clearPropertyState_(); } catch (eClear2) {}
-    return fromSheet;
-  }
-  const fromDrive = loadAppStateFromDrive_();
-  if (fromDrive) {
-    try { clearPropertyState_(); } catch (eClear) {}
-    return fromDrive;
-  }
-  const legacy = loadAppStateFromProperties_();
-  if (legacy) {
-    try { saveAppState_(legacy); } catch (e2) {}
-    return legacy;
-  }
-  return null;
-}
-
 function saveAppState_(state) {
+  const props = PropertiesService.getScriptProperties();
   const json = JSON.stringify(state);
-  // Prefer Drive file when configured (handles >500KB state).
-  if (STATE_DRIVE_FILE_ID) {
-    try {
-      DriveApp.getFileById(STATE_DRIVE_FILE_ID).setContent(json);
-      try { clearPropertyState_(); } catch (e) {}
-      return;
-    } catch (eDrive) {
-      // fall through to sheet
-    }
-  }
-  const sheet = getStateSheet_();
-  const chunks = [];
-  for (let i = 0; i < json.length; i += STATE_CELL_CHUNK) {
-    chunks.push([Math.floor(i / STATE_CELL_CHUNK), json.slice(i, i + STATE_CELL_CHUNK)]);
-  }
-  sheet.clear();
-  sheet.getRange(1, 1, 1, 2).setValues([['chunk', 'json']]);
-  if (chunks.length) sheet.getRange(2, 1, 1 + chunks.length, 2).setValues(chunks);
-  try { clearPropertyState_(); } catch (e) {}
+  const oldCount = Number(props.getProperty(STATE_PREFIX + 'count') || 0);
+  const count = Math.ceil(json.length / STATE_CHUNK_SIZE);
+  const updates = {};
+  updates[STATE_PREFIX + 'count'] = String(count);
+  for (let i = 0; i < count; i++) updates[STATE_PREFIX + i] = json.slice(i * STATE_CHUNK_SIZE, (i + 1) * STATE_CHUNK_SIZE);
+  props.setProperties(updates, false);
+  for (let i = count; i < oldCount; i++) props.deleteProperty(STATE_PREFIX + i);
 }
 
 function publicState_(state) {
