@@ -132,7 +132,8 @@ function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => voi
   const expected: TabKey[] = idea.ventureTrack ? [] : [...(includesShort(idea.horizon) ? ["shortIdeas" as const] : []), ...(includesLong(idea.horizon) ? ["longIdeas" as const] : [])];
   const conflicts = (state?.conflicts ?? []).filter(c => c.entityId === idea.id).length;
   const statuses = [...new Set([idea.status, ...STATUS_SUGGESTIONS].filter(Boolean))];
-  const canPromoteFromPipeline = idea.ventureTrack === null;
+  // Falsy covers null/undefined/"" — older site records may omit ventureTrack.
+  const canPromoteFromPipeline = !idea.ventureTrack;
   const canPromoteFromVault = idea.ventureTrack === "Idea Vault";
   const canPromote = canPromoteFromPipeline || canPromoteFromVault;
   const promoteLabel = canPromoteFromVault ? "Promote to Business and Brand Ideas" : "Move to Business and Brand Ideas";
@@ -152,7 +153,7 @@ function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => voi
     <header className="workspace-head">
       <div className="min-w-0 flex-1">
         <div className="ws-meta">
-          <MetaSelect label="Venture space" value={idea.ventureTrack ?? "Income Pipeline"} options={["Income Pipeline", ...VENTURE_TRACKS]}
+          <MetaSelect label="Venture space" value={idea.ventureTrack || "Income Pipeline"} options={["Income Pipeline", ...VENTURE_TRACKS]}
             onSave={v => save.field("ventureTrack")(v === "Income Pipeline" ? null : v)} />
           <MetaSelect label="Horizon" value={idea.horizon} options={[...HORIZONS]} onSave={save.field("horizon")} />
           <MetaSelect label="Income style" value={idea.incomeStyle} options={[...INCOME_STYLES]} onSave={save.field("incomeStyle")} />

@@ -43,8 +43,14 @@ function group<T extends { ideaId: string | null }>(rows: T[]) {
 
 const n = (v: number | null | undefined) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
+function normalizeIdea(idea: Idea): Idea {
+  // Older site/sheet records may omit ventureTrack; treat that as Income Pipeline.
+  if (idea.ventureTrack) return idea;
+  return idea.ventureTrack === null ? idea : { ...idea, ventureTrack: null };
+}
+
 export function derive(state: AppState | null): Derived {
-  const all = state?.ideas ?? [];
+  const all = (state?.ideas ?? []).map(normalizeIdea);
   // In the Short-Term workbook, "No" is Randy's decision to exclude an idea
   // from the working Lab. Keep the synced record intact, but do not surface it
   // in site libraries, counts, search, or financial rollups.
