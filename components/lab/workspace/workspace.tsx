@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Archive, ArchiveRestore, LayoutList, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Archive, ArchiveRestore, BriefcaseBusiness, LayoutList, MoreHorizontal, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -9,8 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  HORIZONS, INCOME_STYLES, MODULES, OPPORTUNITY_TYPES, STAGES, STATUS_SUGGESTIONS, VENTURE_TRACKS, defaultModules, includesLong, includesShort,
-  relativeTime, type Idea, type ModuleKey,
+  DEFAULT_ACHIEVEMENT_STEPS, HORIZONS, INCOME_STYLES, MODULES, OPPORTUNITY_TYPES, STAGES, STATUS_SUGGESTIONS, VENTURE_TRACKS,
+  defaultModules, includesLong, includesShort, relativeTime, type Idea, type ModuleKey,
 } from "@/lib/domain";
 import { TABS, type TabKey } from "@/lib/sync/tabs";
 import { cn } from "@/lib/utils";
@@ -125,13 +125,28 @@ export function Workspace({ ideaId, module }: { ideaId: string; module?: string 
 }
 
 function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => void }) {
-  const { state, go } = useLab();
+  const { state, go, update } = useLab();
   const save = useIdeaSave(idea);
   const health = useSyncHealth();
   const rows = (state?.sheetRows[idea.syncId] ?? []).filter(r => r.tab in TABS) as Array<{ tab: TabKey; row: number | null }>;
   const expected: TabKey[] = idea.ventureTrack ? [] : [...(includesShort(idea.horizon) ? ["shortIdeas" as const] : []), ...(includesLong(idea.horizon) ? ["longIdeas" as const] : [])];
   const conflicts = (state?.conflicts ?? []).filter(c => c.entityId === idea.id).length;
   const statuses = [...new Set([idea.status, ...STATUS_SUGGESTIONS].filter(Boolean))];
+  const canPromoteFromPipeline = idea.ventureTrack === null;
+  const canPromoteFromVault = idea.ventureTrack === "Idea Vault";
+  const canPromote = canPromoteFromPipeline || canPromoteFromVault;
+  const promoteLabel = canPromoteFromVault ? "Promote to Business and Brand Ideas" : "Move to Business and Brand Ideas";
+
+  const promoteToBusinessAndBrand = async () => {
+    const patch: Record<string, unknown> = { ventureTrack: "Venture Studio" };
+    if (idea.stage === "Discover") patch.stage = "Validate";
+    const existing = String(idea.details.achievementSteps ?? "").trim();
+    if (!existing) {
+      patch.details = { ...idea.details, achievementSteps: DEFAULT_ACHIEVEMENT_STEPS };
+    }
+    const ok = await update("ideas", idea.id, patch);
+    if (ok) go("businesses/ideas");
+  };
 
   return (
     <header className="workspace-head">
@@ -150,6 +165,13 @@ function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => voi
           placeholder="Add a short description — why is this interesting?" className="ws-description" />
         {!idea.description && (idea.personalFitAngle || idea.howItEarns) && (
           <p className="ws-source-note"><span>From the workbook:</span> {idea.personalFitAngle || idea.howItEarns}</p>
+        )}
+        {canPromote && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button className="rounded-full" onClick={() => void promoteToBusinessAndBrand()}>
+              {canPromoteFromVault ? <Rocket /> : <BriefcaseBusiness />} {promoteLabel}
+            </Button>
+          </div>
         )}
       </div>
       <aside className="ws-side">
@@ -177,6 +199,12 @@ function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => voi
             <Button variant="ghost" size="sm" className="self-start"><MoreHorizontal /> More</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {canPromote && (
+              <DropdownMenuItem onSelect={() => void promoteToBusinessAndBrand()}>
+                {canPromoteFromVault ? <Rocket /> : <BriefcaseBusiness />} {promoteLabel}
+              </DropdownMenuItem>
+            )}
+            {canPromote && <DropdownMenuSeparator />}
             <DropdownMenuItem onSelect={onArchive} className="text-destructive"><Archive /> Archive Idea…</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

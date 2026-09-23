@@ -91,8 +91,18 @@ export type IdeaDetails = {
   brandVoice?: string; visualDirection?: string; namingNotes?: string; packagingNotes?: string;
   primaryAudience?: string; marketingObjectives?: string; channelStrategy?: string; contentPillars?: string;
   launchPlan?: string; campaignIdeas?: string; partnershipsPlan?: string; marketingMetrics?: string;
+  /** Newline-separated high-level steps to make a business/brand idea real. */
+  achievementSteps?: string;
   modules?: ModuleKey[];
 };
+
+export const DEFAULT_ACHIEVEMENT_STEPS = [
+  "Clarify offer and customer",
+  "Validate demand with a small test",
+  "Set up delivery / operations basics",
+  "Land first paying customers",
+  "Systemize and decide scale vs pause",
+].join("\n");
 
 type Stamped = { createdAt: string; updatedAt: string; deletedAt: string | null };
 type Num = number | null;

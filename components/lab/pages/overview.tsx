@@ -31,21 +31,22 @@ export function OverviewPage() {
       + (shortScore(i) ?? i.sheetFitScore ?? 0);
     const top = (list: Idea[]) => [...list].sort((a, b) => rank(b) - rank(a)).slice(0, 2).map(i => i.title);
 
+    const pipeline = ideas.filter(i => !i.ventureTrack);
     const ventures = ideas.filter(isVenture);
     const activeBusinesses = ventures.filter(i => i.ventureTrack === "Venture Studio" || ADVANCED.has(i.stage) || /validated|building|earning/i.test(i.status));
     const savedIdeas = ideas.filter(i => i.ventureTrack === "Idea Vault");
-    const totals = sum(ideas);
+    const totals = sum(pipeline);
     const investments = state?.investments ?? [];
 
     return [
       {
         path: "opportunities", title: "Opportunities", icon: Shapes, tone: "coral", cta: "See the Whole Picture",
-        count: ideas.length,
+        count: pipeline.length,
         lines: [
-          `${running(ideas)} being tested`,
-          totals.revenue || totals.net ? `${money(totals.revenue)} revenue · ${money(totals.net)} net` : "Near-term, long-term, career & passive-ish",
+          `${running(pipeline)} being tested`,
+          totals.revenue || totals.net ? `${money(totals.revenue)} revenue · ${money(totals.net)} net` : "Near-term, long-term & passive-ish income",
         ],
-        examples: top(ideas.filter(i => i.status !== "Avoid for now")),
+        examples: top(pipeline.filter(i => i.status !== "Avoid for now")),
       },
       {
         path: "businesses", title: "Businesses", icon: BriefcaseBusiness, tone: "blue", cta: "Open Business Workspaces",

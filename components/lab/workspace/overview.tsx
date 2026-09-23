@@ -1,10 +1,10 @@
 "use client";
 
-import { Clock3, Coins, Target } from "lucide-react";
+import { Clock3, Coins, ListOrdered, Target } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
-  LONG_DIMENSIONS, SHORT_DIMENSIONS, effortAverage, includesLong, includesShort, moneyRange, relativeTime, shortDate, shortScore,
-  type Idea,
+  DEFAULT_ACHIEVEMENT_STEPS, LONG_DIMENSIONS, SHORT_DIMENSIONS, effortAverage, includesLong, includesShort, isVenture,
+  moneyRange, relativeTime, shortDate, shortScore, type Idea,
 } from "@/lib/domain";
 import { WORKBOOKS } from "@/lib/sync/tabs";
 import { useLab } from "../store";
@@ -41,6 +41,35 @@ export function OverviewModule({ idea }: { idea: Idea }) {
           </div>
         </div>
       </section>
+
+      {(idea.ventureTrack === "Venture Studio" || (isVenture(idea) && idea.ventureTrack !== "Idea Vault")) && (
+        <section className="ws-card span-2">
+          <p className="eyebrow">Path to Achievement</p>
+          <h2 className="panel-title mt-2 flex items-center gap-2"><ListOrdered className="size-5" aria-hidden /> High-level steps to make this real</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            One step per line. Replace the starter path with what this business or brand actually needs.
+          </p>
+          <div className="detail-field mt-4">
+            <Editable
+              label="Achievement steps"
+              hideLabel
+              type="textarea"
+              value={idea.details.achievementSteps ?? ""}
+              placeholder={DEFAULT_ACHIEVEMENT_STEPS}
+              onSave={save.detail("achievementSteps")}
+              display={
+                String(idea.details.achievementSteps ?? "").trim() ? (
+                  <ol className="list-decimal space-y-1 pl-5 text-sm">
+                    {String(idea.details.achievementSteps).split(/\n+/).map(s => s.trim()).filter(Boolean).map((step, i) => (
+                      <li key={`${i}-${step.slice(0, 24)}`}>{step.replace(/^\d+[.)]\s*/, "")}</li>
+                    ))}
+                  </ol>
+                ) : undefined
+              }
+            />
+          </div>
+        </section>
+      )}
 
       {long && (idea.year1 || idea.year3 || idea.year5 || idea.year10) && (
         <section className="ws-card span-3">

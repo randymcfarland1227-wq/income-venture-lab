@@ -105,7 +105,7 @@ export function AddIdeaDialog() {
               <select id="idea-destination" value={draft.destination} onChange={e => set("destination", e.target.value)}>
                 {DESTINATIONS.map(d => <option key={d}>{d}</option>)}
               </select>
-              <span className="form-hint">{draft.destination === "Active Business" ? "For a company or brand you are actively developing, with planning, brand, and marketing tools." : draft.destination === "Idea or Invention" ? "For a concept worth keeping and exploring without forcing it into an income plan." : "A flexible opportunity that can appear in near-term, long-term, career, or passive-ish views."}</span>
+              <span className="form-hint">{draft.destination === "Active Business" ? "For a company or brand you are developing—lands in Business and Brand Ideas / Active Businesses with planning tools." : draft.destination === "Idea or Invention" ? "For a concept worth keeping and exploring without forcing it into an income plan." : "An income-pipeline opportunity for near-term, long-term, or passive-ish views—not an invention and not an active business yet."}</span>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               {draft.destination === "Opportunity" && <div className="grid gap-2">
