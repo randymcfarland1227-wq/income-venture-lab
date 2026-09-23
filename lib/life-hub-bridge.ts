@@ -2,9 +2,18 @@
 
 import type { AppState, Experiment, Idea, SprintAction } from "@/lib/domain";
 
-export const LIFE_HUB_ORIGIN = "https://frontier-work-room.randymcfarland1227.workers.dev";
+/** Allowed Life Hub parent origins (GitHub Pages primary + legacy Worker). */
+export const LIFE_HUB_ORIGINS = [
+  "https://randymcfarland1227-wq.github.io",
+  "https://frontier-work-room.randymcfarland1227.workers.dev",
+] as const;
+export const LIFE_HUB_ORIGIN = LIFE_HUB_ORIGINS[0];
 export const INCOME_SOURCE = "income" as const;
 const ORIGIN_URL = "https://randymcfarland1227-wq.github.io/income-venture-lab/";
+
+export function isLifeHubOrigin(origin: string) {
+  return (LIFE_HUB_ORIGINS as readonly string[]).includes(origin);
+}
 const STAR_KEY = "income-lab.lifeHubStars";
 
 export type LifeHubFeatured = {
@@ -169,15 +178,18 @@ export function buildIncomeSnapshot(state: AppState): LifeHubSnapshot {
 
 export function postIncomeSnapshot(state: AppState, target?: MessageEventSource | null, origin = LIFE_HUB_ORIGIN) {
   const message = { type: "randys-workroom:snapshot" as const, payload: buildIncomeSnapshot(state) };
+  const fanout = origin === LIFE_HUB_ORIGIN ? [...LIFE_HUB_ORIGINS] : [origin];
   try {
     if (target && "postMessage" in target) (target as Window).postMessage(message, { targetOrigin: origin });
   } catch { /* ignore */ }
-  try {
-    if (window.opener && !window.opener.closed) window.opener.postMessage(message, origin);
-  } catch { /* ignore */ }
-  try {
-    if (window.parent !== window) window.parent.postMessage(message, origin);
-  } catch { /* ignore */ }
+  for (const o of fanout) {
+    try {
+      if (window.opener && !window.opener.closed) window.opener.postMessage(message, o);
+    } catch { /* ignore */ }
+    try {
+      if (window.parent !== window) window.parent.postMessage(message, o);
+    } catch { /* ignore */ }
+  }
 }
 
 type BridgeHandlers = {
@@ -189,7 +201,7 @@ type BridgeHandlers = {
 
 export function attachIncomeLifeHubBridge(handlers: BridgeHandlers) {
   const onMessage = async (event: MessageEvent) => {
-    if (event.origin !== LIFE_HUB_ORIGIN) return;
+    if (!isLifeHubOrigin(event.origin)) return;
     const type = event.data?.type;
     if (type === "randys-workroom:request") {
       const state = handlers.getState();
