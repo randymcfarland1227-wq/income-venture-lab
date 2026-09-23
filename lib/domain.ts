@@ -300,6 +300,21 @@ export const isVenture = (idea: Idea) => VENTURE_TYPES.has(idea.opportunityType)
 export const isShortTermNo = (idea: Idea) => includesShort(idea.horizon) && String(idea.status ?? "").trim().toLowerCase() === "no";
 export const isPassive = (idea: Idea) => idea.incomeStyle === "Passive-ish" || (idea.passivePotential ?? 0) >= 4;
 
+/** Strategy meta-items about career capital — not discrete income opportunities. */
+const CAREER_META_TITLE = /career capital|primary income growth/i;
+const CAREER_CATEGORY = /career|skills/i;
+
+export function isCareerStrategyMeta(idea: Idea): boolean {
+  if (CAREER_META_TITLE.test(idea.title ?? "")) return true;
+  if (idea.source === "strategy-v2" && CAREER_CATEGORY.test(idea.category ?? "")) return true;
+  return false;
+}
+
+/** Income Pipeline rows: no venture track, not career-strategy meta. */
+export function isIncomePipelineIdea(idea: Idea): boolean {
+  return !idea.ventureTrack && !isCareerStrategyMeta(idea);
+}
+
 export function passiveGroup(idea: Idea): (typeof PASSIVE_GROUPS)[number] {
   switch (idea.opportunityType) {
     case "Digital Product": case "Ecommerce": return "Digital Assets";

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { ArrowUpRight, BriefcaseBusiness, FlaskConical, History, Lightbulb, PieChart, Shapes } from "lucide-react";
 import {
-  isVenture, money, relativeTime, shortDate, shortScore, type Idea,
+  isIncomePipelineIdea, isVenture, money, relativeTime, shortDate, shortScore, type Idea,
 } from "@/lib/domain";
 import { HEALTH_LABEL, SyncDot, useSyncHealth } from "../shell";
 import { useLab } from "../store";
@@ -31,7 +31,7 @@ export function OverviewPage() {
       + (shortScore(i) ?? i.sheetFitScore ?? 0);
     const top = (list: Idea[]) => [...list].sort((a, b) => rank(b) - rank(a)).slice(0, 2).map(i => i.title);
 
-    const pipeline = ideas.filter(i => !i.ventureTrack);
+    const pipeline = ideas.filter(isIncomePipelineIdea);
     const ventures = ideas.filter(isVenture);
     const activeBusinesses = ventures.filter(i => i.ventureTrack === "Venture Studio" || ADVANCED.has(i.stage) || /validated|building|earning/i.test(i.status));
     const savedIdeas = ideas.filter(i => i.ventureTrack === "Idea Vault");

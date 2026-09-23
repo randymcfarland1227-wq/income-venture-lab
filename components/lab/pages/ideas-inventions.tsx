@@ -13,11 +13,22 @@ const INVENTION_TYPES = new Set(["Technology Product", "Consumer Product", "Comp
 
 export function IdeasInventionsPage({ tab = "all" }: { tab?: string }) {
   const { data, setAddIdeaOpen } = useLab();
-  const all = useMemo(() => data.ideas.filter(i => i.ventureTrack === "Idea Vault"), [data.ideas]);
-  const concepts = useMemo(() => all.filter(i => ["Discover", "Validate"].includes(i.stage)), [all]);
-  const inventions = useMemo(() => all.filter(i => INVENTION_TYPES.has(i.opportunityType)), [all]);
-  const promoted = useMemo(() => all.filter(i => ["Build", "Launch", "Scale"].includes(i.stage) || /building|validated|earning/i.test(i.status)), [all]);
-  const list = tab === "explore" ? concepts : tab === "inventions" ? inventions : tab === "promoted" ? promoted : all;
+  // Idea Vault inventions only — not income concepts dumped into the vault.
+  const all = useMemo(
+    () => data.ideas.filter(i => i.ventureTrack === "Idea Vault" && INVENTION_TYPES.has(i.opportunityType)),
+    [data.ideas],
+  );
+  const inventions = useMemo(
+    () => all.filter(i => i.opportunityType !== "Other"),
+    [all],
+  );
+  const promoted = useMemo(
+    () => all.filter(i => ["Build", "Launch", "Scale"].includes(i.stage) || /building|validated|earning/i.test(i.status)),
+    [all],
+  );
+  // Legacy "explore" (Concepts to Explore) maps to all inventions.
+  const activeTab = tab === "explore" ? "all" : tab;
+  const list = activeTab === "inventions" ? inventions : activeTab === "promoted" ? promoted : all;
   return (
     <div className="page-theme page-theme-ideas">
       <PageHeader eyebrow="Keep the Spark · Lose the Pressure" title="Ideas & Inventions"
@@ -26,8 +37,12 @@ export function IdeasInventionsPage({ tab = "all" }: { tab?: string }) {
       <div className="idea-manifesto">
         <span><Lightbulb /></span><div><strong>Ideas can stay ideas.</strong><p>This space is for inventions and genuine concepts—not income pipeline items. Explore the problem, technology, audience, and possibilities. Promote into Business and Brand Ideas only when that becomes the useful next step.</p></div>
       </div>
-      <SectionTabs base="ideas" active={tab} tabs={[["all", "All Ideas", all.length], ["explore", "Concepts to Explore", concepts.length], ["inventions", "Ideas & Inventions", inventions.length], ["promoted", "Ready to Build", promoted.length]]} />
-      <OpportunityLibrary ideas={list} storageKey={`ideas:${tab}`}
+      <SectionTabs base="ideas" active={activeTab} tabs={[
+        ["all", "All Ideas", all.length],
+        ["inventions", "Ideas & Inventions", inventions.length],
+        ["promoted", "Ready to Build", promoted.length],
+      ]} />
+      <OpportunityLibrary ideas={list} storageKey={`ideas:${activeTab}`}
         filters={[FILTERS.category, FILTERS.type, FILTERS.stage, validationFilter(data.assumptionsByIdea)]}
         sorts={[SORTS.recent, SORTS.name, SORTS.potential]}
         columns={MIXED_COLUMNS} emptyText="Capture an invention or true idea here—no need to decide an income role." />

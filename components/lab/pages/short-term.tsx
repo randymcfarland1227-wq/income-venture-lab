@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { includesShort, isShortTermNo, shortScore, type Idea } from "@/lib/domain";
+import { includesShort, isIncomePipelineIdea, isShortTermNo, shortScore, type Idea } from "@/lib/domain";
 import { ExperimentList, SprintList } from "../experiments";
 import { FindingList } from "../findings";
 import { OpportunityLibrary } from "../idea-views";
@@ -14,7 +14,7 @@ import { PageHeader, SectionHeader } from "../ui";
 
 export function ShortTermPage({ tab = "opportunities" }: { tab?: string }) {
   const { data, state } = useLab();
-  const ideas = useMemo(() => data.ideas.filter(i => includesShort(i.horizon) && !i.ventureTrack), [data.ideas]);
+  const ideas = useMemo(() => data.ideas.filter(i => includesShort(i.horizon) && isIncomePipelineIdea(i)), [data.ideas]);
   const experiments = useMemo(() => (state?.experiments ?? []).filter(e => {
     const sourceIdea = e.ideaId ? (state?.ideas ?? []).find(i => i.id === e.ideaId) : undefined;
     if (sourceIdea && isShortTermNo(sourceIdea)) return false;

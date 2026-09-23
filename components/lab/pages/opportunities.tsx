@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Clock3, Layers3, Sparkles } from "lucide-react";
-import { includesLong, includesShort, isPassive } from "@/lib/domain";
+import { includesLong, includesShort, isIncomePipelineIdea, isPassive } from "@/lib/domain";
 import { OpportunityLibrary } from "../idea-views";
 import { FILTERS, MIXED_COLUMNS, SORTS, validationFilter } from "../library-defs";
 import { SectionTabs } from "../section-tabs";
@@ -11,8 +11,8 @@ import { PageHeader } from "../ui";
 
 export function OpportunitiesPage({ tab = "all" }: { tab?: string }) {
   const { data, go } = useLab();
-  // Income Pipeline only — not inventions, not Venture Studio businesses.
-  const all = useMemo(() => data.ideas.filter(i => !i.ventureTrack && !i.deletedAt), [data.ideas]);
+  // Income Pipeline only — not inventions, not career-capital strategy meta, not Venture Studio.
+  const all = useMemo(() => data.ideas.filter(isIncomePipelineIdea), [data.ideas]);
   const near = useMemo(() => all.filter(i => includesShort(i.horizon)), [all]);
   const long = useMemo(() => all.filter(i => includesLong(i.horizon)), [all]);
   const passive = useMemo(() => all.filter(isPassive), [all]);
