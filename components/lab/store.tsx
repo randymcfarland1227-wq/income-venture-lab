@@ -7,6 +7,7 @@ import type { Mutation } from "@/lib/server/repo";
 import type { TabKey } from "@/lib/sync/tabs";
 import { derive, type Derived } from "./derive";
 import { runtimeApi } from "@/lib/client/runtime-api";
+import { attachIncomeLifeHubBridge, postIncomeSnapshot } from "@/lib/life-hub-bridge";
 
 export type Route = { page: string; sub?: string; id?: string; module?: string };
 
@@ -216,6 +217,25 @@ export function LabProvider({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Life Hub bridge — sprint/experiments complete via store mutations; stars in localStorage.
+  const stateRef = useRef<AppState | null>(null);
+  stateRef.current = state;
+  const updateRef = useRef(update);
+  updateRef.current = update;
+  useEffect(() => attachIncomeLifeHubBridge({
+    getState: () => stateRef.current,
+    completeRecord: async (collection, id) => {
+      if (collection === "sprint") {
+        await updateRef.current("sprint", id, { status: "Done" });
+      } else {
+        await updateRef.current("experiments", id, { status: "Complete" });
+      }
+    },
+  }), []);
+  useEffect(() => {
+    if (state) postIncomeSnapshot(state);
+  }, [state]);
 
   const data = useMemo(() => derive(state), [state]);
 
