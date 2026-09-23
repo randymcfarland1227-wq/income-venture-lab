@@ -87,8 +87,30 @@ async function pagesMarketData<T>(force = false): Promise<T> {
   return localJson<T>(url, { cache: "no-store" });
 }
 
+const FILLED_STATE_SNAPSHOT_ID = "ivl-filled-2026-09-23";
+
+async function pagesFilledState<T>(): Promise<T> {
+  return localJson<T>(`${PAGES_BASE}ivl-app-state.json`, { cache: "no-store" });
+}
+
+async function pagesState<T>(): Promise<T> {
+  // Prefer Apps Script when it already serves the filled snapshot (Drive/sheet-backed).
+  // Until then, fall back to the static filled JSON on Pages so Opportunities show live.
+  try {
+    const remote = await bridgeCall<T & { stateSnapshotId?: string }>("state");
+    if (remote && remote.stateSnapshotId === FILLED_STATE_SNAPSHOT_ID) return remote as T;
+  } catch {
+    // bridge down — try static
+  }
+  try {
+    return await pagesFilledState<T>();
+  } catch {
+    return bridgeCall<T>("state");
+  }
+}
+
 export const runtimeApi = {
-  state: <T>() => IS_GITHUB_PAGES ? bridgeCall<T>("state") : localJson<T>("/api/state", { cache: "no-store" }),
+  state: <T>() => IS_GITHUB_PAGES ? pagesState<T>() : localJson<T>("/api/state", { cache: "no-store" }),
   mutate: <T>(mutation: unknown) => IS_GITHUB_PAGES
     ? bridgeCall<T>("mutate", { mutation })
     : localJson<T>("/api/mutate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(mutation) }),
