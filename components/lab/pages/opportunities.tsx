@@ -45,7 +45,7 @@ export function OpportunitiesPage({ tab = "all" }: { tab?: string }) {
         <div><span>10 years</span><strong>Create resilience & wealth</strong></div>
       </div>}
       <OpportunityLibrary ideas={list} storageKey={`opportunities:${tab}`}
-        filters={[FILTERS.horizon, FILTERS.style, FILTERS.category, FILTERS.type, FILTERS.stage, FILTERS.status, validationFilter(data.assumptionsByIdea), FILTERS.startupMax, FILTERS.monthlyMin]}
+        filters={[FILTERS.active, FILTERS.horizon, FILTERS.style, FILTERS.category, FILTERS.type, FILTERS.stage, FILTERS.status, validationFilter(data.assumptionsByIdea), FILTERS.startupMax, FILTERS.monthlyMin]}
         sorts={[SORTS.recent, SORTS.potential, SORTS.score, SORTS.startup, SORTS.name]}
         columns={MIXED_COLUMNS} emptyText="Add an income opportunity, or update one of the connected income workbooks." />
     </div>

@@ -8,11 +8,12 @@ import {
 } from "@/lib/domain";
 import { WORKBOOKS } from "@/lib/sync/tabs";
 import { useLab } from "../store";
+import { TaskList } from "../tracking";
 import { Editable } from "../ui";
 import { DetailField, useIdeaSave } from "./common";
 
 export function OverviewModule({ idea }: { idea: Idea }) {
-  const { state } = useLab();
+  const { state, update } = useLab();
   const save = useIdeaSave(idea);
   const short = includesShort(idea.horizon);
   const long = includesLong(idea.horizon);
@@ -21,6 +22,8 @@ export function OverviewModule({ idea }: { idea: Idea }) {
 
   return (
     <div className="ws-grid">
+      <TaskList key={idea.id} tasks={idea.tasks} onSave={tasks => update("ideas", idea.id, { tasks })} className="span-3" />
+
       <section className="ws-card span-2">
         <p className="eyebrow">Opportunity Thesis</p>
         <div className="mt-3 grid gap-4">

@@ -11,6 +11,7 @@ import { FORMS } from "../forms";
 import { SectionTabs } from "../section-tabs";
 import { OpenInSheet } from "../sheet-link";
 import { useLab } from "../store";
+import { ActiveBadge } from "../tracking";
 import { Empty, PageHeader, RecordDialog, SectionHeader, StatusPill, Tag, useRecordDialog } from "../ui";
 import { runtimeApi } from "@/lib/client/runtime-api";
 
@@ -121,7 +122,7 @@ function Explore({ options, live, refreshing }: { options: InvestmentOption[]; l
                 {options.filter(option => option.category === category).map(option => (
                   <button key={option.id} type="button" className="investment-card" onClick={() => go(`investment/${option.id}`)}>
                     <div className="flex items-start justify-between gap-2"><Tag>{option.accountOrAsset}</Tag><StatusPill status={option.status} /></div>
-                    <h3>{option.name}</h3><p>{option.definition}</p>
+                    <div className="card-title-row"><h3>{option.name}</h3><ActiveBadge active={option.active} /></div><p>{option.definition}</p>
                     <dl><div><dt>Risk profile</dt><dd>{option.riskProfile.market?.level ?? "Varies"}</dd></div><div><dt>Liquidity</dt><dd>{option.liquidity || "Varies"}</dd></div><div><dt>Horizon</dt><dd>{option.horizon || "Varies"}</dd></div></dl>
                     <span className="open-link">Explore <ArrowRight /></span>
                   </button>
@@ -139,7 +140,7 @@ function Considering({ options }: { options: InvestmentOption[] }) {
   const { go } = useLab();
   const shortlisted = options.filter(option => ["Considering", "Researching", "Watch", "Paper Trial", "Own"].includes(option.status));
   return <div><SectionHeader eyebrow="Personal Shortlist" title="Considering" description="This is what you want to investigate—not a recommendation or ranking." />
-    {shortlisted.length ? <div className="investment-card-grid">{shortlisted.map(option => <button key={option.id} className="investment-card" onClick={() => go(`investment/${option.id}`)}><div className="flex justify-between gap-2"><Tag>{option.accountOrAsset}</Tag><StatusPill status={option.status} /></div><h3>{option.name}</h3><p>{option.definition}</p><span className="open-link">Continue research <ArrowRight /></span></button>)}</div>
+    {shortlisted.length ? <div className="investment-card-grid">{shortlisted.map(option => <button key={option.id} className="investment-card" onClick={() => go(`investment/${option.id}`)}><div className="flex justify-between gap-2"><Tag>{option.accountOrAsset}</Tag><StatusPill status={option.status} /></div><div className="card-title-row"><h3>{option.name}</h3><ActiveBadge active={option.active} /></div><p>{option.definition}</p><span className="open-link">Continue research <ArrowRight /></span></button>)}</div>
       : <Empty icon={BookOpen} title="Nothing shortlisted yet" text="Change an investment’s status to Considering, Researching, Watch, Paper Trial, or Own." />}</div>;
 }
 

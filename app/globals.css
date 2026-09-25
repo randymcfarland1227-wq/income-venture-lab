@@ -759,3 +759,50 @@ button.link-chip:hover { background: #d9e7e1; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Active / Not Active marker + per-record task list */
+.card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; }
+.card-title-row > h3 { min-width: 0; overflow-wrap: anywhere; }
+.card-title-row .active-badge { margin-top: .55rem; }
+.investment-card .card-title-row .active-badge { margin-top: .45rem; }
+.title-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+.title-row > .ws-title { min-width: 0; }
+.title-row h1 { min-width: 0; }
+.active-badge { display: inline-flex; align-items: center; gap: .38rem; flex: none; width: max-content; border-radius: 999px; padding: .26rem .6rem; font-size: .7rem; font-weight: 650; line-height: 1.2; white-space: nowrap; }
+.active-badge.compact { margin-left: .35rem; padding: .12rem .45rem; font-size: .64rem; vertical-align: .1em; }
+.active-dot { width: .55rem; height: .55rem; flex: none; border-radius: 999px; }
+.active-badge.is-active { background: #e0f0e5; color: #236b3d; }
+.active-badge.is-active .active-dot { background: #22a55a; box-shadow: 0 0 0 3px rgba(34,165,90,.18); }
+.active-badge.is-inactive { background: #eef1f0; color: #66736f; }
+.active-badge.is-inactive .active-dot { background: #a3adaa; }
+.active-badge.toggle { padding: .42rem .85rem; font-size: .8rem; cursor: pointer; transition: filter .15s, transform .15s; }
+.active-badge.toggle:hover { filter: brightness(.96); }
+.active-badge.toggle:active { transform: scale(.97); }
+.active-badge.toggle .active-dot { width: .65rem; height: .65rem; }
+.task-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.task-count { font-size: .75rem; font-weight: 650; color: var(--muted-foreground); }
+.task-add { display: flex; gap: .5rem; margin-top: .85rem; }
+.task-add input { flex: 1; min-width: 0; }
+.task-list { display: grid; gap: .1rem; margin-top: .75rem; }
+.task-row { display: flex; align-items: flex-start; gap: .7rem; border-radius: .7rem; padding: .45rem .5rem; }
+.task-row:hover { background: #f4f7f5; }
+.task-check { display: grid; place-items: center; width: 1.15rem; height: 1.15rem; flex: none; margin-top: .12rem; border: 1.5px solid #9fb0ab; border-radius: 999px; color: #fff; transition: background .15s, border-color .15s; }
+.task-check:hover { border-color: #22a55a; }
+.task-row.done .task-check { border-color: #22a55a; background: #22a55a; }
+.task-text { flex: 1; min-width: 0; font-size: .9rem; line-height: 1.45; overflow-wrap: anywhere; }
+.task-row.done .task-text { color: var(--muted-foreground); text-decoration: line-through; }
+.task-remove { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; flex: none; border-radius: 999px; color: var(--muted-foreground); opacity: 0; transition: opacity .15s, background .15s; }
+.task-row:hover .task-remove, .task-remove:focus-visible { opacity: 1; }
+.task-remove:hover { background: #e9eeec; color: var(--foreground); }
+@media (hover: none) { .task-remove { opacity: .6; } }
+.task-empty { margin-top: .8rem; font-size: .85rem; color: var(--muted-foreground); }
+.task-done-toggle { margin-top: .6rem; font-size: .75rem; font-weight: 650; color: var(--primary); }
+.task-done-toggle:hover { text-decoration: underline; }
+.dark .active-badge.is-active { background: #173827; color: #91d5a7; }
+.dark .active-badge.is-active .active-dot { background: #3ccf78; box-shadow: 0 0 0 3px rgba(60,207,120,.2); }
+.dark .active-badge.is-inactive { background: #1c2c29; color: #9eb0ab; }
+.dark .active-badge.is-inactive .active-dot { background: #6d7c78; }
+.dark .task-row:hover { background: #192926; }
+.dark .task-remove:hover { background: #22332f; }
+.dark .task-check { border-color: #5f726d; }
+.dark .investment-workspace-head > div:first-child { background: var(--card); }

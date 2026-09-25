@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { incomeLevel, monthYear, passiveLevel, startupLevel, type Idea } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { useLab } from "./store";
+import { ActiveBadge, openTaskCount } from "./tracking";
 import { Empty, StatusPill } from "./ui";
 
 // ---------------------------------------------------------------------------
@@ -25,6 +26,7 @@ export const DEFAULT_METRICS: CardMetric[] = [
 export function IdeaCard({ idea, metrics = DEFAULT_METRICS }: { idea: Idea; metrics?: CardMetric[] }) {
   const { go, data } = useLab();
   const running = data.actuals.get(idea.id)?.running ?? 0;
+  const todo = openTaskCount(idea.tasks);
   const summary = (idea.description || idea.personalFitAngle || idea.howItEarns || "Ready for a thesis and a first low-cost test.")
     .replace(/income-opportunity pipeline/gi, "income plan");
   return (
@@ -35,7 +37,10 @@ export function IdeaCard({ idea, metrics = DEFAULT_METRICS }: { idea: Idea; metr
           <span className="testing-flag" title={`${running} experiment running`}><FlaskConical className="size-3" /> Testing</span>
         )}
       </div>
-      <h3 className="idea-card-title">{idea.title}</h3>
+      <div className="card-title-row">
+        <h3 className="idea-card-title">{idea.title}</h3>
+        <ActiveBadge active={idea.active} />
+      </div>
       <StatusPill status={idea.status} />
       <p className="idea-card-desc">{summary}</p>
       <dl className="card-metrics">
@@ -47,7 +52,7 @@ export function IdeaCard({ idea, metrics = DEFAULT_METRICS }: { idea: Idea; metr
         ))}
       </dl>
       <div className="idea-card-foot">
-        <span>Updated {monthYear(idea.updatedAt)}</span>
+        <span>Updated {monthYear(idea.updatedAt)}{todo > 0 && ` · ${todo} task${todo === 1 ? "" : "s"}`}</span>
         <span className="open-link">Open Workspace <ArrowUpRight className="size-3.5" /></span>
       </div>
     </button>
@@ -103,7 +108,7 @@ export function IdeaTable({ ideas, columns }: { ideas: Idea[]; columns: Column[]
           {rows.map(i => (
             <tr key={i.id} onClick={() => go(`idea/${i.id}`)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter") go(`idea/${i.id}`); }}>
               <th scope="row" className="sticky-col">
-                <span className="table-title">{i.title}</span>
+                <span className="table-title">{i.title} <ActiveBadge active={i.active} compact /></span>
                 <span className="table-sub">{i.category}</span>
               </th>
               {columns.map(c => (

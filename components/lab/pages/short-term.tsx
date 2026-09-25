@@ -58,7 +58,7 @@ export function ShortTermPage({ tab = "opportunities" }: { tab?: string }) {
         <OpportunityLibrary
           ideas={ideas}
           storageKey="short"
-          filters={[FILTERS.status, FILTERS.category, FILTERS.tier, FILTERS.speedMin, FILTERS.startupMax, FILTERS.fitMin, FILTERS.demandMin, FILTERS.monthlyMin, activeExperimentFilter(data.actuals)]}
+          filters={[FILTERS.active, FILTERS.status, FILTERS.category, FILTERS.tier, FILTERS.speedMin, FILTERS.startupMax, FILTERS.fitMin, FILTERS.demandMin, FILTERS.monthlyMin, activeExperimentFilter(data.actuals)]}
           sorts={[SORTS.score, SORTS.speed, SORTS.potential, SORTS.startup, SORTS.recent, SORTS.name]}
           columns={SHORT_COLUMNS}
           metrics={SHORT_METRICS}

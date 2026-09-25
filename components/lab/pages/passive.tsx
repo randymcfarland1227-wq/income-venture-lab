@@ -43,7 +43,7 @@ export function PassivePage() {
         ideas={ideas}
         storageKey="passive"
         groupBy={passiveGroup}
-        filters={[FILTERS.group, FILTERS.horizon, FILTERS.startupMax, FILTERS.passiveMin, FILTERS.maintenanceMax, FILTERS.monthlyMin]}
+        filters={[FILTERS.active, FILTERS.group, FILTERS.horizon, FILTERS.startupMax, FILTERS.passiveMin, FILTERS.maintenanceMax, FILTERS.monthlyMin]}
         sorts={[SORTS.passive, SORTS.maintenance, SORTS.potential, SORTS.startup, SORTS.weeks, SORTS.name]}
         columns={passiveColumns(data.actuals)}
         metrics={PASSIVE_METRICS}

@@ -105,9 +105,15 @@ export const DEFAULT_ACHIEVEMENT_STEPS = [
 ].join("\n");
 
 type Stamped = { createdAt: string; updatedAt: string; deletedAt: string | null };
+
+/** A to-do on an opportunity, business, idea, or investment. Site-only; never written to Sheets. */
+export type LabTask = { id: string; text: string; done: boolean; createdAt: string; doneAt: string | null };
+
+/** Site-only fields shared by ideas and investments. Missing `active` means not active. */
+type Trackable = { active?: boolean; tasks?: LabTask[] };
 type Num = number | null;
 
-export type Idea = Stamped & {
+export type Idea = Stamped & Trackable & {
   id: string; syncId: string; title: string; description: string;
   horizon: Horizon; incomeStyle: IncomeStyle; opportunityType: string; category: string;
   status: string; stage: string; tier: string; sheetRef: Num; ventureTrack: VentureTrack | null;
@@ -179,7 +185,7 @@ export type InvestmentRiskProfile = Record<
   { level: "Low" | "Moderate" | "High" | "Varies"; explanation: string }
 >;
 
-export type InvestmentOption = Stamped & {
+export type InvestmentOption = Stamped & Trackable & {
   id: string; syncId: string; name: string; classification: string; category: string;
   accountOrAsset: "Account" | "Asset" | "Fund" | "Security" | "Benchmark" | "Cash product" | "Other";
   symbol: string; benchmark: string; definition: string; returnMechanism: string; horizon: string; liquidity: string;

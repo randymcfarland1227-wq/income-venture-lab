@@ -29,6 +29,7 @@ export const SORTS = {
 };
 
 export const FILTERS = {
+  active: { key: "active", label: "Active Only", kind: "toggle", get: (i: Idea) => Boolean(i.active) } as FilterDef,
   status: { key: "status", label: "Status", kind: "choice", get: (i: Idea) => i.status } as FilterDef,
   category: { key: "category", label: "Category", kind: "choice", get: (i: Idea) => i.category } as FilterDef,
   tier: { key: "tier", label: "Tier", kind: "choice", get: (i: Idea) => i.tier } as FilterDef,

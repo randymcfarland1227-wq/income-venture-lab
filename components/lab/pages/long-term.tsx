@@ -54,7 +54,7 @@ export function LongTermPage({ tab = "opportunities" }: { tab?: string }) {
           <OpportunityLibrary
             ideas={ideas}
             storageKey="long"
-            filters={[FILTERS.status, FILTERS.category, FILTERS.style, FILTERS.startupMax, FILTERS.monthlyMin, FILTERS.passiveMin]}
+            filters={[FILTERS.active, FILTERS.status, FILTERS.category, FILTERS.style, FILTERS.startupMax, FILTERS.monthlyMin, FILTERS.passiveMin]}
             sorts={[SORTS.recent, SORTS.potential, SORTS.startup, SORTS.passive, SORTS.name]}
             columns={LONG_COLUMNS}
             metrics={LONG_METRICS}

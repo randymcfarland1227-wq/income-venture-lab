@@ -43,7 +43,7 @@ export function IdeasInventionsPage({ tab = "all" }: { tab?: string }) {
         ["promoted", "Ready to Build", promoted.length],
       ]} />
       <OpportunityLibrary ideas={list} storageKey={`ideas:${activeTab}`}
-        filters={[FILTERS.category, FILTERS.type, FILTERS.stage, validationFilter(data.assumptionsByIdea)]}
+        filters={[FILTERS.active, FILTERS.category, FILTERS.type, FILTERS.stage, validationFilter(data.assumptionsByIdea)]}
         sorts={[SORTS.recent, SORTS.name, SORTS.potential]}
         columns={MIXED_COLUMNS} emptyText="Capture an invention or true idea here—no need to decide an income role." />
       <div className="mt-8 grid gap-3 sm:grid-cols-2">

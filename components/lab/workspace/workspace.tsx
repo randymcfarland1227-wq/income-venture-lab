@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { OpenInSheet } from "../sheet-link";
 import { HEALTH_LABEL, SyncDot, useSyncHealth } from "../shell";
 import { useLab } from "../store";
+import { ActiveToggle } from "../tracking";
 import { Editable, Empty } from "../ui";
 import { useIdeaSave } from "./common";
 import { OverviewModule } from "./overview";
@@ -161,7 +162,10 @@ function WorkspaceHeader({ idea, onArchive }: { idea: Idea; onArchive: () => voi
           <MetaSelect label="Stage" value={idea.stage} options={[...STAGES]} onSave={save.field("stage")} />
           <MetaSelect label="Status" value={idea.status} options={statuses} onSave={save.field("status")} emphasis />
         </div>
-        <Editable label="Idea name" hideLabel value={idea.title} onSave={v => { if (String(v ?? "").trim()) void save.field("title")(v); }} className="ws-title" />
+        <div className="title-row">
+          <Editable label="Idea name" hideLabel value={idea.title} onSave={v => { if (String(v ?? "").trim()) void save.field("title")(v); }} className="ws-title" />
+          <ActiveToggle active={idea.active} onChange={next => update("ideas", idea.id, { active: next })} />
+        </div>
         <Editable label="Description" hideLabel type="textarea" value={idea.description} onSave={save.field("description")}
           placeholder="Add a short description — why is this interesting?" className="ws-description" />
         {!idea.description && (idea.personalFitAngle || idea.howItEarns) && (
