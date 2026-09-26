@@ -1,6 +1,6 @@
 /** Life Hub postMessage bridge — source id `income`. See frontier LIFE_HUB.md. */
 
-import type { AppState, Experiment, Idea, SprintAction } from "@/lib/domain";
+import type { AppState, LabTask } from "@/lib/domain";
 
 /** Allowed Life Hub parent origins (GitHub Pages primary + legacy Worker). */
 export const LIFE_HUB_ORIGINS = [
@@ -23,6 +23,7 @@ export type LifeHubFeatured = {
   meta: string;
   originUrl?: string;
   completable?: boolean;
+  tag?: string;
 };
 
 export type LifeHubTask = {
@@ -33,6 +34,8 @@ export type LifeHubTask = {
   due?: string;
   starred?: boolean;
   originUrl?: string;
+  completedAt?: string;
+  tag?: string;
 };
 
 export type LifeHubSnapshot = {
@@ -70,105 +73,74 @@ export function setIncomeStarred(id: string, starred: boolean) {
   writeStars(stars);
 }
 
-const DONE_SPRINT = new Set(["done", "complete", "completed", "skipped"]);
-const DONE_EXPERIMENT = new Set(["complete", "completed", "stopped", "paused"]);
-const ACTIVE_IDEA = new Set(["exploring", "shortlist", "consider", "research", "testing", "validated", "building", "earning"]);
+type TrackCollection = "ideas" | "investments";
+type TrackItem = { id: string; name: string; active: boolean; tasks: LabTask[]; collection: TrackCollection; deleted: boolean };
 
-function sprintOpen(s: SprintAction) {
-  return !DONE_SPRINT.has(String(s.status || "").trim().toLowerCase());
+/** Businesses, opportunities, ideas & inventions (ideas) plus investments — each with its own task list. */
+function trackItems(state: AppState): TrackItem[] {
+  return [
+    ...state.ideas.map(i => ({
+      id: i.id, name: i.title || "Untitled", active: Boolean(i.active), tasks: i.tasks ?? [],
+      collection: "ideas" as const, deleted: Boolean(i.deletedAt),
+    })),
+    ...state.investments.map(o => ({
+      id: o.id, name: o.name || "Investment", active: Boolean(o.active), tasks: o.tasks ?? [],
+      collection: "investments" as const, deleted: Boolean(o.deletedAt),
+    })),
+  ].filter(item => !item.deleted);
 }
 
-function experimentOpen(e: Experiment) {
-  return !DONE_EXPERIMENT.has(String(e.status || "").trim().toLowerCase());
+/** Life Hub id for one task on one item: task:<collection>:<itemId>:<taskId> */
+const taskHubId = (item: TrackItem, taskId: string) => `task:${item.collection}:${item.id}:${taskId}`;
+
+function parseTaskHubId(id: string): { collection: TrackCollection; itemId: string; taskId: string } | null {
+  const m = id.match(/^task:(ideas|investments):([^:]+):(.+)$/);
+  return m ? { collection: m[1] as TrackCollection, itemId: m[2], taskId: m[3] } : null;
 }
 
-function ideaActive(i: Idea) {
-  const status = String(i.status || "").trim().toLowerCase();
-  if (!status) return true;
-  if (status === "paused" || status === "avoid for now" || status === "no" || status === "archived") return false;
-  return ACTIVE_IDEA.has(status) || !DONE_SPRINT.has(status);
+/** Short item name shown as the tag in front of each task on Life Hub. */
+function tagFor(name: string) {
+  return name.length > 22 ? `${name.slice(0, 21).trimEnd()}…` : name;
 }
 
-type TaskRow = LifeHubTask & { completable: boolean; collection?: "sprint" | "experiments" | "ideas" };
-
-function collectTasks(state: AppState): TaskRow[] {
-  const stars = readStars();
-  const rows: TaskRow[] = [];
-
-  state.sprint.filter(sprintOpen).forEach(s => {
-    const id = `sprint:${s.id}`;
-    rows.push({
-      id,
-      title: s.action || "Sprint action",
-      detail: s.deliverable || s.successSignal || undefined,
-      status: "open",
-      due: s.day || undefined,
-      starred: Boolean(stars[id]),
-      originUrl: ORIGIN_URL,
-      completable: true,
-      collection: "sprint",
-    });
-  });
-
-  state.experiments.filter(experimentOpen).forEach(e => {
-    const id = `experiment:${e.id}`;
-    rows.push({
-      id,
-      title: e.name || e.testAction || "Experiment",
-      detail: e.hypothesis || e.ideaLabel || undefined,
-      status: String(e.status || "open").toLowerCase() === "running" ? "open" : "open",
-      due: e.decisionDate || e.startDate || undefined,
-      starred: Boolean(stars[id]),
-      originUrl: `${ORIGIN_URL}#/experiments`,
-      completable: true,
-      collection: "experiments",
-    });
-  });
-
-  state.ideas.filter(ideaActive).forEach(i => {
-    const id = `idea:${i.id}`;
-    rows.push({
-      id,
-      title: i.title || "Idea",
-      detail: i.firstTest || i.notes || undefined,
-      status: "open",
-      starred: Boolean(stars[id]),
-      originUrl: `${ORIGIN_URL}#/idea/${encodeURIComponent(i.id)}`,
-      completable: false,
-      collection: "ideas",
-    });
-  });
-
-  return rows;
-}
+const DONE_WINDOW_DAYS = 7;
 
 export function buildIncomeSnapshot(state: AppState): LifeHubSnapshot {
-  const rows = collectTasks(state);
-  const activeVentures = state.ideas.filter(i => {
-    const s = String(i.status || "").toLowerCase();
-    return s === "building" || s === "earning" || s === "testing" || s === "validated";
-  }).length;
-  const revenueTracks = state.experiments.filter(e => Number(e.revenue || 0) > 0).length
-    + state.ideas.filter(i => String(i.status || "").toLowerCase() === "earning").length;
+  const stars = readStars();
+  const items = trackItems(state);
+  const active = items.filter(i => i.active);
+  const cutoff = Date.now() - DONE_WINDOW_DAYS * 86400000;
 
-  const tasks: LifeHubTask[] = rows.map(({ completable: _c, collection: _col, ...task }) => task);
-  const featured: LifeHubFeatured[] = rows
-    .filter(r => r.starred)
-    .map(r => ({
-      id: r.id,
-      title: r.title,
-      detail: r.detail || r.status || "",
-      meta: r.collection === "sprint" ? "Sprint" : r.collection === "experiments" ? "Experiment" : "Idea",
-      originUrl: r.originUrl,
-      completable: r.completable,
-    }));
+  const tasks: LifeHubTask[] = [];
+  const featured: LifeHubFeatured[] = [];
+  for (const item of active) {
+    const url = `${ORIGIN_URL}#/${item.collection === "investments" ? "investment" : "idea"}/${encodeURIComponent(item.id)}`;
+    for (const t of item.tasks) {
+      const id = taskHubId(item, t.id);
+      if (t.done) {
+        // Recently finished in the lab — Life Hub records each once as a completion.
+        const at = t.doneAt ? Date.parse(t.doneAt) : NaN;
+        if (Number.isFinite(at) && at >= cutoff) {
+          tasks.push({ id, title: t.text, detail: item.name, status: "done", completedAt: t.doneAt ?? undefined, originUrl: url, tag: tagFor(item.name) });
+        }
+        continue;
+      }
+      const starred = Boolean(stars[id]);
+      tasks.push({ id, title: t.text, detail: item.name, status: "open", starred, originUrl: url, tag: tagFor(item.name) });
+      if (starred) {
+        featured.push({ id, title: t.text, detail: item.name, meta: item.collection === "investments" ? "Investment" : "Venture", originUrl: url, completable: true, tag: tagFor(item.name) });
+      }
+    }
+  }
 
   return {
     source: INCOME_SOURCE,
     metrics: {
-      active: activeVentures,
-      ideas: state.ideas.filter(ideaActive).length,
-      revenue: revenueTracks,
+      // Open tasks on active items (Life Hub shows this as its to-do count)
+      activeTasks: tasks.filter(t => t.status === "open").length,
+      active: active.length,
+      // Investments are left out of "not active" on purpose
+      inactive: items.filter(i => !i.active && i.collection === "ideas").length,
     },
     featured,
     tasks,
@@ -176,9 +148,9 @@ export function buildIncomeSnapshot(state: AppState): LifeHubSnapshot {
   };
 }
 
-export function postIncomeSnapshot(state: AppState, target?: MessageEventSource | null, origin = LIFE_HUB_ORIGIN) {
+export function postIncomeSnapshot(state: AppState, target?: MessageEventSource | null, origin: string = LIFE_HUB_ORIGIN) {
   const message = { type: "randys-workroom:snapshot" as const, payload: buildIncomeSnapshot(state) };
-  const fanout = origin === LIFE_HUB_ORIGIN ? [...LIFE_HUB_ORIGINS] : [origin];
+  const fanout: string[] = origin === LIFE_HUB_ORIGIN ? [...LIFE_HUB_ORIGINS] : [origin];
   try {
     if (target && "postMessage" in target) (target as Window).postMessage(message, { targetOrigin: origin });
   } catch { /* ignore */ }
@@ -194,8 +166,8 @@ export function postIncomeSnapshot(state: AppState, target?: MessageEventSource 
 
 type BridgeHandlers = {
   getState: () => AppState | null;
-  /** Persist domain mutations when complete hits a sprint/experiment. */
-  completeRecord?: (collection: "sprint" | "experiments", id: string) => Promise<void> | void;
+  /** Mark one task on an idea / investment done (Life Hub "Done"). */
+  completeTask?: (collection: "ideas" | "investments", itemId: string, taskId: string) => Promise<void> | void;
   onSnapshot?: () => void;
 };
 
@@ -223,12 +195,8 @@ export function attachIncomeLifeHubBridge(handlers: BridgeHandlers) {
     }
 
     if (type === "randys-workroom:complete") {
-      if (rawId.startsWith("sprint:") && handlers.completeRecord) {
-        await handlers.completeRecord("sprint", rawId.slice("sprint:".length));
-      } else if (rawId.startsWith("experiment:") && handlers.completeRecord) {
-        await handlers.completeRecord("experiments", rawId.slice("experiment:".length));
-      }
-      // Ideas are not completable from the hub; unstar only.
+      const ref = parseTaskHubId(rawId);
+      if (ref && handlers.completeTask) await handlers.completeTask(ref.collection, ref.itemId, ref.taskId);
       setIncomeStarred(rawId, false);
       const state = handlers.getState();
       if (state) postIncomeSnapshot(state, event.source, event.origin);

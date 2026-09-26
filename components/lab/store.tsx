@@ -225,12 +225,16 @@ export function LabProvider({ children }: { children: ReactNode }) {
   updateRef.current = update;
   useEffect(() => attachIncomeLifeHubBridge({
     getState: () => stateRef.current,
-    completeRecord: async (collection, id) => {
-      if (collection === "sprint") {
-        await updateRef.current("sprint", id, { status: "Done" });
-      } else {
-        await updateRef.current("experiments", id, { status: "Complete" });
-      }
+    completeTask: async (collection, itemId, taskId) => {
+      const current = stateRef.current;
+      const item = collection === "ideas"
+        ? current?.ideas.find(i => i.id === itemId)
+        : current?.investments.find(o => o.id === itemId);
+      if (!item?.tasks?.some(t => t.id === taskId && !t.done)) return;
+      const at = new Date().toISOString();
+      await updateRef.current(collection, itemId, {
+        tasks: item.tasks.map(t => (t.id === taskId ? { ...t, done: true, doneAt: at } : t)),
+      });
     },
   }), []);
   useEffect(() => {
