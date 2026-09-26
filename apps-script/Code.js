@@ -1205,17 +1205,15 @@ function loadAppStateFromSheet_() {
 }
 
 function loadAppState_() {
-  // Prefer Drive when configured: filled offline JSON is authoritative and avoids
-  // partial/corrupt sheet writes. Fall back to sheet, then legacy properties.
+  // A save lands in Drive when it can and in the hidden sheet when it can't, so read
+  // both and keep the most recently saved copy (Drive wins a tie). Then legacy properties.
   const fromDrive = loadAppStateFromDrive_();
-  if (fromDrive) {
-    try { clearPropertyState_(); } catch (eClear) {}
-    return fromDrive;
-  }
   const fromSheet = loadAppStateFromSheet_();
-  if (fromSheet) {
-    try { clearPropertyState_(); } catch (eClear2) {}
-    return fromSheet;
+  const savedAt = function(s) { return (s && Date.parse(s.savedAt || '')) || 0; };
+  const newest = fromDrive && fromSheet ? (savedAt(fromSheet) > savedAt(fromDrive) ? fromSheet : fromDrive) : (fromDrive || fromSheet);
+  if (newest) {
+    try { clearPropertyState_(); } catch (eClear) {}
+    return newest;
   }
   const legacy = loadAppStateFromProperties_();
   if (legacy) {
@@ -1226,6 +1224,7 @@ function loadAppState_() {
 }
 
 function saveAppState_(state) {
+  state.savedAt = new Date().toISOString();
   const json = JSON.stringify(state);
   // Prefer Drive file when configured (handles >500KB state).
   if (STATE_DRIVE_FILE_ID) {
@@ -1244,7 +1243,7 @@ function saveAppState_(state) {
   }
   sheet.clear();
   sheet.getRange(1, 1, 1, 2).setValues([['chunk', 'json']]);
-  if (chunks.length) sheet.getRange(2, 1, 1 + chunks.length, 2).setValues(chunks);
+  if (chunks.length) sheet.getRange(2, 1, chunks.length, 2).setValues(chunks);
   try { clearPropertyState_(); } catch (e) {}
 }
 
