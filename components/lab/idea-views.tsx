@@ -6,7 +6,7 @@ import { Archive, ArrowDown, Clock, ChevronRight, Undo2, ArrowUp, ArrowUpRight, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { incomeLevel, isInvestmentIdea, monthYear, passiveLevel, startupLevel, type Idea } from "@/lib/domain";
+import { isAvoided, isInvestmentIdea, isSetAside, monthYear, moneyRange, startupMax, statusRank, timeToMoney, type Idea } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { useLab } from "./store";
 import { ActiveBadge, openTaskCount } from "./tracking";
@@ -89,9 +89,9 @@ function IdeaMenu({ menu, onClose }: { menu: { idea: Idea; x: number; y: number 
 export type CardMetric = { label: string; value: (idea: Idea) => ReactNode };
 
 export const DEFAULT_METRICS: CardMetric[] = [
-  { label: "Startup", value: startupLevel },
-  { label: "Income Potential", value: incomeLevel },
-  { label: "Passive Potential", value: passiveLevel },
+  { label: "Startup cost", value: i => (startupMax(i) === null ? "—" : moneyRange(i.startupLow, i.startupHigh)) },
+  { label: "Time to first $", value: timeToMoney },
+  { label: "Earning / mo", value: i => (i.monthlyLow === null && i.monthlyHigh === null ? "—" : moneyRange(i.monthlyLow, i.monthlyHigh, true)) },
 ];
 
 export function IdeaCard({ idea, metrics = DEFAULT_METRICS, onMenu }: { idea: Idea; metrics?: CardMetric[]; onMenu?: MenuOpen }) {
@@ -255,8 +255,8 @@ export function OpportunityLibrary({
   const [text, setText] = useState("");
   const [menu, setMenu] = useState<{ idea: Idea; x: number; y: number } | null>(null);
   const openMenu: MenuOpen = (idea, x, y) => setMenu({ idea, x, y });
-  const maybe = useMemo(() => ideas.filter(i => i.maybeLater), [ideas]);
-  const mainIdeas = useMemo(() => ideas.filter(i => !i.maybeLater), [ideas]);
+  const maybe = useMemo(() => ideas.filter(isSetAside), [ideas]);
+  const mainIdeas = useMemo(() => ideas.filter(i => !isSetAside(i)), [ideas]);
 
   const active = Object.entries(values).filter(([, v]) => v !== null && v !== "" && v !== false);
 
@@ -277,6 +277,8 @@ export function OpportunityLibrary({
     const sort = sorts.find(s => s.key === sortKey) ?? sorts[0];
     if (sort) {
       list = [...list].sort((a, b) => {
+        const r = statusRank(a) - statusRank(b);
+        if (r) return r;
         const va = sort.value(a);
         const vb = sort.value(b);
         if (va === null || va === "") return 1;
@@ -383,7 +385,9 @@ export function OpportunityLibrary({
             {maybe.map(i => (
               <li key={i.id} {...menuHandlers(i, openMenu)}>
                 <button type="button" onClick={() => go(`idea/${i.id}`)}>{i.title}</button>
-                <button type="button" className="maybe-back" onClick={() => void update("ideas", i.id, { maybeLater: false })}>Move back</button>
+                {isAvoided(i)
+                  ? <span className="maybe-back">Avoid for now</span>
+                  : <button type="button" className="maybe-back" onClick={() => void update("ideas", i.id, { maybeLater: false })}>Move back</button>}
               </li>
             ))}
           </ul>

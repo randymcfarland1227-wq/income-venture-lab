@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Clock3, Landmark, Layers3, Sparkles } from "lucide-react";
-import { includesLong, includesShort, investmentHorizon, isIncomePipelineIdea, isInvestmentIdea, isPassive } from "@/lib/domain";
+import { includesLong, includesShort, investmentHorizon, isIncomePipelineIdea, isInvestmentIdea, isPassive, isSetAside } from "@/lib/domain";
 import { OpportunityLibrary } from "../idea-views";
 import { FILTERS, MIXED_COLUMNS, SORTS, validationFilter } from "../library-defs";
 import { SectionTabs } from "../section-tabs";
@@ -13,6 +13,7 @@ export function OpportunitiesPage({ tab = "all" }: { tab?: string }) {
   const { data, go } = useLab();
   // Income Pipeline only — not inventions, not career-capital strategy meta, not Venture Studio.
   const all = useMemo(() => data.ideas.filter(isIncomePipelineIdea), [data.ideas]);
+  const counted = (l: typeof data.ideas) => l.filter(i => !isSetAside(i)).length;
   // Investments get their own tab and stay out of Near-Term / Long-Term / Passive-ish.
   const invest = useMemo(() => all.filter(isInvestmentIdea), [all]);
   const income = useMemo(() => all.filter(i => !isInvestmentIdea(i)), [all]);
@@ -40,8 +41,8 @@ export function OpportunitiesPage({ tab = "all" }: { tab?: string }) {
         <button type="button" onClick={() => go("investing")} className="lens-guide-link">Investments & assets →</button>
       </div>
       <SectionTabs base="opportunities" active={tab} tabs={[
-        ["all", "All", all.length], ["near-term", "Near-Term", near.length], ["long-term", "Long-Term", long.length],
-        ["passive", "Passive-ish", passive.length], ["investments", "Investments", invest.length],
+        ["all", "All", counted(all)], ["near-term", "Near-Term", counted(near)], ["long-term", "Long-Term", counted(long)],
+        ["passive", "Passive-ish", counted(passive)], ["investments", "Investments", counted(invest)],
       ]} />
       {tab === "long-term" && <div className="strategy-horizon" aria-label="Long-term planning horizons">
         <div><span>1 year</span><strong>Build the foundation</strong></div>

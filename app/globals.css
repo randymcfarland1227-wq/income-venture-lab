@@ -124,7 +124,9 @@ select:disabled { opacity: .6; }
 .section-tab { display: inline-flex; align-items: center; gap: .45rem; flex: none; padding: .7rem .9rem; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: .9rem; font-weight: 600; color: var(--muted-foreground); transition: color .2s, border-color .2s; }
 .section-tab:hover { color: var(--foreground); }
 .section-tab.active { color: var(--foreground); border-bottom-color: var(--primary); }
-.section-tab-count { border-radius: 999px; background: #e7ece9; padding: .05rem .45rem; font-size: .7rem; }
+.section-tab-count { border-radius: 999px; background: #e7ece9; color: #31413d; padding: .05rem .45rem; font-size: .7rem; font-weight: 700; }
+.dark .section-tab-count { background: #2d4540; color: #e6efec; }
+.dark .section-tab.active .section-tab-count { background: var(--primary); color: #0b1b18; }
 
 /* ---------- Small pieces ---------- */
 .status-pill { display: inline-flex; align-items: center; gap: .4rem; flex: none; width: max-content; border-radius: 999px; padding: .28rem .6rem; font-size: .72rem; font-weight: 650; line-height: 1.2; background: #edf1ee; color: #4e625d; }
@@ -824,3 +826,4 @@ button.link-chip:hover { background: #d9e7e1; }
 .maybe-later li:hover { background: rgba(0,0,0,.05); }
 .maybe-later li > button:first-child { flex: 1; min-width: 0; padding: .5rem 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .maybe-later .maybe-back { font-size: .8rem; text-decoration: underline; }
+.maybe-later span.maybe-back { text-decoration: none; opacity: .7; }

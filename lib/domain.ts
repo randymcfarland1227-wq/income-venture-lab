@@ -432,6 +432,22 @@ export function startupMax(idea: Idea): number | null {
   return Math.max(idea.startupLow ?? 0, idea.startupHigh ?? 0);
 }
 
+/** Hidden from the main list and counts: parked by hand ("Maybe later") or marked "Avoid for now". */
+export const isAvoided = (idea: Idea) => /^avoid/i.test(String(idea.status ?? ""));
+export const isSetAside = (idea: Idea) => !!idea.maybeLater || isAvoided(idea);
+
+const STATUS_ORDER = [/^active$/i, /^building$/i, /^research/i, /^consider/i];
+export function statusRank(idea: Idea) {
+  const s = String(idea.status ?? "");
+  const i = STATUS_ORDER.findIndex(r => r.test(s));
+  return i === -1 ? STATUS_ORDER.length : i;
+}
+
+export function timeToMoney(idea: Idea) {
+  if (idea.weeksToFirst !== null && idea.weeksToFirst !== undefined) return `${idea.weeksToFirst} wk${idea.weeksToFirst === 1 ? "" : "s"}`;
+  return idea.firstCash || "—";
+}
+
 export function startupLevel(idea: Idea) {
   const v = startupMax(idea);
   if (v === null) return "Unknown";
