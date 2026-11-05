@@ -18,7 +18,7 @@ import { runtimeApi } from "@/lib/client/runtime-api";
 type DataState = { metrics: InvestmentMetric[]; marketQuoteProvider: string; refresh?: { results?: Array<{ provider: string; status: string; error?: string }> } };
 
 const tabs: Array<[string, string]> = [
-  ["explore", "Explore"], ["considering", "Considering"], ["compare", "Compare"],
+  ["explore", "Explore"], ["active", "Active"], ["considering", "Considering"], ["compare", "Compare"],
   ["experiments", "Experiments"], ["scenario", "Growth Scenario"], ["discovery", "Investing Discovery"],
 ];
 
@@ -49,7 +49,8 @@ export function InvestingPage({ tab = "explore" }: { tab?: string }) {
         description="Understand accounts, assets, benchmarks, risk, and real-world data without turning research into a recommendation."
         actions={<><OpenInSheet tab="investments" label="Open Investing Sheet" /><Button variant="outline" className="rounded-full" onClick={() => void refresh(true)} disabled={refreshing}><RefreshCw className={refreshing ? "animate-spin" : ""} /> Refresh Data</Button></>} />
       <SectionTabs base="investing" active={tab} tabs={tabs} />
-      {tab === "considering" ? <Considering options={options} />
+      {tab === "active" ? <ActiveInvestments options={options} />
+        : tab === "considering" ? <Considering options={options} />
         : tab === "compare" ? <Compare options={options} />
         : tab === "experiments" ? <InvestmentExperiments />
         : tab === "scenario" ? <GrowthScenario />
@@ -138,10 +139,18 @@ function Explore({ options, live, refreshing }: { options: InvestmentOption[]; l
 
 function Considering({ options }: { options: InvestmentOption[] }) {
   const { go } = useLab();
-  const shortlisted = options.filter(option => ["Considering", "Researching", "Watch", "Paper Trial", "Own"].includes(option.status));
+  const shortlisted = options.filter(option => ["Considering", "Researching", "Watch", "Paper Trial"].includes(option.status));
   return <div><SectionHeader eyebrow="Personal Shortlist" title="Considering" description="This is what you want to investigate—not a recommendation or ranking." />
     {shortlisted.length ? <div className="investment-card-grid">{shortlisted.map(option => <button key={option.id} className="investment-card" onClick={() => go(`investment/${option.id}`)}><div className="flex justify-between gap-2"><Tag>{option.accountOrAsset}</Tag><StatusPill status={option.status} /></div><div className="card-title-row"><h3>{option.name}</h3><ActiveBadge active={option.active} /></div><p>{option.definition}</p><span className="open-link">Continue research <ArrowRight /></span></button>)}</div>
-      : <Empty icon={BookOpen} title="Nothing shortlisted yet" text="Change an investment’s status to Considering, Researching, Watch, Paper Trial, or Own." />}</div>;
+      : <Empty icon={BookOpen} title="Nothing shortlisted yet" text="Change an investment’s status to Considering, Researching, Watch, or Paper Trial." />}</div>;
+}
+
+function ActiveInvestments({ options }: { options: InvestmentOption[] }) {
+  const { go } = useLab();
+  const active = options.filter(option => ["Active", "Own"].includes(option.status));
+  return <div><SectionHeader eyebrow="In Play" title="Active" description="Investments you've moved from Considering to actually doing or holding." />
+    {active.length ? <div className="investment-card-grid">{active.map(option => <button key={option.id} className="investment-card" onClick={() => go(`investment/${option.id}`)}><div className="flex justify-between gap-2"><Tag>{option.accountOrAsset}</Tag><StatusPill status={option.status} /></div><div className="card-title-row"><h3>{option.name}</h3><ActiveBadge active={option.active} /></div><p>{option.definition}</p><span className="open-link">Open <ArrowRight /></span></button>)}</div>
+      : <Empty icon={BookOpen} title="Nothing active yet" text="When you start an investment, change its status from Considering to Active and it will show up here." />}</div>;
 }
 
 function Compare({ options }: { options: InvestmentOption[] }) {

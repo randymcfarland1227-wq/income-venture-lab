@@ -139,7 +139,7 @@ export const FORMS: Record<Collection | "marketResearch", FieldSpec[]> = {
     { key: "category", label: "Category", type: "select", options: ["Cash & Capital Preservation", "Bonds & Fixed Income", "Stocks & Equity", "Funds", "Real Estate", "Alternative Assets", "Investment Accounts", "Benchmarks"] },
     { key: "accountOrAsset", label: "Account or Asset?", type: "select", options: ["Account", "Asset", "Fund", "Security", "Benchmark", "Cash product", "Other"] },
     { key: "symbol", label: "Symbol / Series", type: "text", hint: "Optional. A licensed quote provider is required for security prices." },
-    { key: "status", label: "Personal Status", type: "select", options: ["Learn", "Considering", "Researching", "Watch", "Paper Trial", "Own", "Paused", "Avoid", "Archived"] },
+    { key: "status", label: "Personal Status", type: "select", options: ["Learn", "Considering", "Researching", "Watch", "Paper Trial", "Active", "Own", "Paused", "Avoid", "Archived"] },
     { key: "definition", label: "What is it?", type: "textarea", wide: true },
     { key: "returnMechanism", label: "How It Produces Returns", type: "textarea", wide: true },
     { key: "horizon", label: "Typical Horizon", type: "text" },

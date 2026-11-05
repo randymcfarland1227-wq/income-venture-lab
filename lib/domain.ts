@@ -31,7 +31,7 @@ export const RESEARCH_KINDS = ["Note", "Observation", "Question", "Link", "Docum
 export const MILESTONE_STATUSES = ["Not Started", "In Progress", "Done", "Blocked"];
 export const COST_TYPES = ["One-time", "Monthly"];
 
-export const INVESTMENT_STATUSES = ["Learn", "Considering", "Researching", "Watch", "Paper Trial", "Own", "Paused", "Avoid", "Archived"] as const;
+export const INVESTMENT_STATUSES = ["Learn", "Considering", "Researching", "Watch", "Paper Trial", "Active", "Own", "Paused", "Avoid", "Archived"] as const;
 export const INVESTMENT_EXPERIMENT_STATUSES = ["Planned", "Running", "Reviewing", "Complete", "Paused"] as const;
 export const INVESTMENT_MODULES = [
   { key: "overview", label: "Overview" }, { key: "how", label: "How It Works" },
