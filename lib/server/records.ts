@@ -28,7 +28,7 @@ export function blankIdea(partial: Partial<Idea> = {}): Idea {
   return {
     id: newId(), syncId: newId(), title: "", description: "", horizon: "Short Term", incomeStyle: "Active",
     opportunityType: "Other", category: "", status: "Exploring", stage: "Discover", tier: "", sheetRef: null, ventureTrack: null,
-    personalFitAngle: "", howItEarns: "", incomeModel: "", firstCash: "", weeksToFirst: null,
+    personalFitAngle: "", howItEarns: "", incomeModel: "", firstCash: "", buildTime: "", weeksToFirst: null,
     startupLow: null, startupHigh: null, monthlyCost: null, weeklyHours: null, monthlyLow: null, monthlyHigh: null,
     maintenanceHours: null, speed: null, fit: null, demand: null, scale: null, lowCost: null, lowRisk: null,
     skillFit: null, interest: null, riskComfort: null, passivePotential: null, setupEffort: null, ongoingEffort: null,

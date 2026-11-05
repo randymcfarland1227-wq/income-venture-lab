@@ -62,6 +62,7 @@ export const TABS: Record<TabKey, TabDef> = {
       f("opportunity", "title", "text", "Opportunity"),
       f("personal fit / angle", "personalFitAngle", "text", "Personal fit / angle"),
       f("first cash", "firstCash", "text", "First cash"),
+      f("build time", "buildTime", "text", "Build time"),
       f("startup cost", "startupLow", "number", "Startup cost"),
       f("weekly hrs", "weeklyHours", "number", "Weekly hrs"),
       f("income model", "incomeModel", "text", "Income model"),

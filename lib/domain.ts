@@ -117,7 +117,7 @@ export type Idea = Stamped & Trackable & {
   id: string; syncId: string; title: string; description: string;
   horizon: Horizon; incomeStyle: IncomeStyle; opportunityType: string; category: string;
   status: string; stage: string; tier: string; sheetRef: Num; ventureTrack: VentureTrack | null;
-  personalFitAngle: string; howItEarns: string; incomeModel: string; firstCash: string; weeksToFirst: Num;
+  personalFitAngle: string; howItEarns: string; incomeModel: string; firstCash: string; buildTime: string; weeksToFirst: Num;
   startupLow: Num; startupHigh: Num; monthlyCost: Num; weeklyHours: Num; monthlyLow: Num; monthlyHigh: Num;
   maintenanceHours: Num;
   speed: Num; fit: Num; demand: Num; scale: Num; lowCost: Num; lowRisk: Num;

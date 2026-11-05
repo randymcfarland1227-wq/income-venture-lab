@@ -90,6 +90,7 @@ export type CardMetric = { label: string; value: (idea: Idea) => ReactNode };
 
 export const DEFAULT_METRICS: CardMetric[] = [
   { label: "Startup cost", value: i => (startupMax(i) === null ? "—" : moneyRange(i.startupLow, i.startupHigh)) },
+  { label: "Build time", value: i => i.buildTime || "—" },
   { label: "Time to first $", value: timeToMoney },
   { label: "Earning / mo", value: i => (i.monthlyLow === null && i.monthlyHigh === null ? "—" : moneyRange(i.monthlyLow, i.monthlyHigh, true)) },
 ];
@@ -114,7 +115,7 @@ export function IdeaCard({ idea, metrics = DEFAULT_METRICS, onMenu }: { idea: Id
       </div>
       <StatusPill status={idea.status} />
       <p className="idea-card-desc">{summary}</p>
-      <dl className="card-metrics">
+      <dl className={metrics.length === 4 ? "card-metrics four" : "card-metrics"}>
         {metrics.map(m => (
           <div key={m.label}>
             <dt>{m.label}</dt>
