@@ -152,25 +152,27 @@ function dispatch_(body) {
         saveAppState_(body.state);
         return { ok: true, bytes: JSON.stringify(body.state).length };
       case 'reconcileState':
-        const state = loadAppState_();
-        if (!state) return { ok: false, error: 'The Lab has not been initialized.' };
-        const result = reconcileState_(state, body.tabs);
-        saveAppState_(state);
-        return { ok: true, result: result };
+        return withLock_(function() {
+          const state = loadAppState_();
+          if (!state) return { ok: false, error: 'The Lab has not been initialized.' };
+          const result = reconcileState_(state, body.tabs);
+          saveAppState_(state);
+          return { ok: true, result: result };
+        }, 120000);
       case 'migrateLongTermV2':
         return migrateLongTermV2_();
       case 'repairLongTermV2':
         return repairLongTermV2_();
       case 'repairMovedShortTermV2':
         return repairMovedShortTermV2_();
-      case 'mutateState': {
+      case 'mutateState': return withLock_(function() {
         const mutableState = loadAppState_();
         if (!mutableState) return { ok: false, error: 'The Lab has not been initialized.' };
         const mutationResult = mutateState_(mutableState, body.mutation || {});
         saveAppState_(mutableState);
         syncMutationToSheets_(mutableState, body.mutation || {}, mutationResult.id);
         return { ok: true, id: mutationResult.id };
-      }
+      }, 120000);
       case 'upsertVenture': {
         const ventureState = loadAppState_();
         if (!ventureState) return { ok: false, error: 'The Lab has not been initialized.' };
@@ -996,12 +998,17 @@ function locateGuardrails_() {
 // Values
 // ---------------------------------------------------------------------------
 
-function withLock_(fn) {
+// Reentrant within one execution: nested calls reuse the lock already held.
+let LOCK_DEPTH_ = 0;
+function withLock_(fn, waitMs) {
+  if (LOCK_DEPTH_ > 0) return fn();
   const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  lock.waitLock(waitMs || 30000);
+  LOCK_DEPTH_++;
   try {
     return fn();
   } finally {
+    LOCK_DEPTH_--;
     lock.releaseLock();
   }
 }
@@ -1122,10 +1129,19 @@ function mapFields_(key) {
 function apiBridgeCall(request) {
   const action = request && request.action;
   const payload = (request && request.payload) || {};
+  // Writers load→change→save the whole state, so they must not overlap: a sync that
+  // started before a delete would otherwise save over it and bring the record back.
+  if (action === 'mutate' || action === 'sync') return withLock_(function() { return apiBridgeWrite_(action, payload); }, 120000);
   let state = loadAppState_();
   if (!state) throw new Error('The Lab has not been initialized.');
   if (action === 'state') return publicState_(state);
   if (action === 'investmentData') return { metrics: state.investmentMetrics || [], sources: state.investmentSources || [], rules: state.investmentRules || [], marketQuoteProvider: 'Official-source observations are refreshed by the Lab; security quotes require a configured provider.' };
+  throw new Error('Unknown application action: ' + action);
+}
+
+function apiBridgeWrite_(action, payload) {
+  const state = loadAppState_();
+  if (!state) throw new Error('The Lab has not been initialized.');
   if (action === 'mutate') {
     const result = mutateState_(state, payload.mutation || {});
     saveAppState_(state);
