@@ -540,7 +540,8 @@ export function money(value: number | null | undefined, compact = false) {
   }).format(value);
 }
 
-export function moneyRange(low: number | null, high: number | null, compact = false) {
+export function moneyRange(low: number | null | undefined, high: number | null | undefined, compact = false) {
+  low = low ?? null; high = high ?? null;
   if (low === null && high === null) return "—";
   if (low === null || high === null || low === high) return money(low ?? high, compact);
   return `${money(low, compact)}–${money(high, compact)}`;
