@@ -44,6 +44,8 @@ export type LifeHubSnapshot = {
   featured: LifeHubFeatured[];
   tasks: LifeHubTask[];
   refreshedAt: string;
+  /** Life Hub "Active Pursuits": ideas marked active or with status Active / Building */
+  shelves?: Array<{ id: string; label: string; items: LifeHubTask[] }>;
 };
 
 type StarStore = Record<string, boolean>;
@@ -133,8 +135,21 @@ export function buildIncomeSnapshot(state: AppState): LifeHubSnapshot {
     }
   }
 
+  const pursuitStatus = (s: string) => /^(active|building)$/i.test((s || "").trim());
+  const pursuits: LifeHubTask[] = state.ideas
+    .filter(i => !i.deletedAt && (i.active || pursuitStatus(i.status)))
+    .map(i => ({
+      id: `pursuit:${i.id}`,
+      title: i.title || "Untitled",
+      detail: i.category || undefined,
+      status: "open",
+      tag: pursuitStatus(i.status) ? i.status.trim() : "Active",
+      originUrl: `${ORIGIN_URL}#/idea/${encodeURIComponent(i.id)}`,
+    }));
+
   return {
     source: INCOME_SOURCE,
+    shelves: [{ id: "pursuits", label: "Active pursuits", items: pursuits }],
     metrics: {
       // Open tasks on active items (Life Hub shows this as its to-do count)
       activeTasks: tasks.filter(t => t.status === "open").length,
