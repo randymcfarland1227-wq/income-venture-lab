@@ -103,7 +103,8 @@ async function pagesState<T>(): Promise<T> {
     // bridge down — try static
   }
   try {
-    return await pagesFilledState<T>();
+    // Marked so the Life Hub bridge never sends this old September copy as if it were live.
+    return { ...(await pagesFilledState<T & object>()), staticSeed: true } as T;
   } catch {
     return bridgeCall<T>("state");
   }

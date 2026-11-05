@@ -164,6 +164,9 @@ export function buildIncomeSnapshot(state: AppState): LifeHubSnapshot {
 }
 
 export function postIncomeSnapshot(state: AppState, target?: MessageEventSource | null, origin: string = LIFE_HUB_ORIGIN) {
+  // The bundled September seed (used when the Sheets bridge can't load, e.g. inside Life Hub's hidden
+  // frame) is not Randy's real lab: sending it would overwrite Life Hub's pursuits/tasks with stale data.
+  if ((state as AppState & { staticSeed?: boolean }).staticSeed) return;
   const message = { type: "randys-workroom:snapshot" as const, payload: buildIncomeSnapshot(state) };
   const fanout: string[] = origin === LIFE_HUB_ORIGIN ? [...LIFE_HUB_ORIGINS] : [origin];
   try {
