@@ -110,7 +110,7 @@ type Stamped = { createdAt: string; updatedAt: string; deletedAt: string | null 
 export type LabTask = { id: string; text: string; done: boolean; createdAt: string; doneAt: string | null };
 
 /** Site-only fields shared by ideas and investments. Missing `active` means not active. */
-type Trackable = { active?: boolean; tasks?: LabTask[] };
+type Trackable = { active?: boolean; maybeLater?: boolean; tasks?: LabTask[] };
 type Num = number | null;
 
 export type Idea = Stamped & Trackable & {

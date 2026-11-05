@@ -806,3 +806,21 @@ button.link-chip:hover { background: #d9e7e1; }
 .dark .task-remove:hover { background: #22332f; }
 .dark .task-check { border-color: #5f726d; }
 .dark .investment-workspace-head > div:first-child { background: var(--card); }
+
+/* Right-click menu + Maybe later list */
+.idea-menu { position: fixed; z-index: 80; width: 200px; padding: .35rem; border-radius: .9rem; background: #fff; box-shadow: 0 12px 40px rgba(20,20,30,.22), 0 0 0 1px rgba(0,0,0,.08); }
+.idea-menu-title { padding: .35rem .6rem; font-size: .72rem; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.idea-menu button { display: flex; width: 100%; align-items: center; gap: .55rem; padding: .6rem .6rem; border-radius: .6rem; font-size: .9rem; text-align: left; }
+.idea-menu button:hover, .idea-menu button:focus-visible { background: #f2f0ea; }
+.idea-menu button.danger { color: #c0392b; }
+.idea-card, .lab-table tr { -webkit-touch-callout: none; }
+.maybe-later { margin-top: 2.5rem; border-radius: 1rem; background: rgba(0,0,0,.04); color: #8a8a8a; filter: grayscale(1); }
+.maybe-later summary { display: flex; cursor: pointer; align-items: center; gap: .5rem; padding: .85rem 1.1rem; font-weight: 600; list-style: none; }
+.maybe-later summary::-webkit-details-marker { display: none; }
+.maybe-later summary span { font-weight: 400; font-size: .85rem; }
+.maybe-later[open] .maybe-chevron { transform: rotate(90deg); }
+.maybe-later ul { padding: 0 .5rem .6rem; }
+.maybe-later li { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .15rem .6rem; border-radius: .6rem; }
+.maybe-later li:hover { background: rgba(0,0,0,.05); }
+.maybe-later li > button:first-child { flex: 1; min-width: 0; padding: .5rem 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.maybe-later .maybe-back { font-size: .8rem; text-decoration: underline; }

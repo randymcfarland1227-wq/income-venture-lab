@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ArrowUpRight, FlaskConical, LayoutGrid, Rows3, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent, type ReactNode } from "react";
+import { toast } from "sonner";
+import { Archive, ArrowDown, Clock, ChevronRight, Undo2, ArrowUp, ArrowUpRight, FlaskConical, LayoutGrid, Rows3, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,6 +11,76 @@ import { cn } from "@/lib/utils";
 import { useLab } from "./store";
 import { ActiveBadge, openTaskCount } from "./tracking";
 import { Empty, StatusPill } from "./ui";
+
+
+// ---------------------------------------------------------------------------
+// Right-click / long-press menu
+// ---------------------------------------------------------------------------
+
+let lastMenuAt = 0;
+export type MenuOpen = (idea: Idea, x: number, y: number) => void;
+
+/** Spread onto a card/row: right-click opens the menu; on touch, a long press does. */
+function menuHandlers(idea: Idea, open?: MenuOpen) {
+  if (!open) return {};
+  let timer: number | undefined;
+  let start: { x: number; y: number } | null = null;
+  const clear = () => { window.clearTimeout(timer); start = null; };
+  return {
+    onClickCapture: (e: React.MouseEvent) => { if (Date.now() - lastMenuAt < 900) { e.stopPropagation(); e.preventDefault(); } },
+    onContextMenu: (e: React.MouseEvent) => { e.preventDefault(); lastMenuAt = Date.now(); open(idea, e.clientX, e.clientY); },
+    onPointerDown: (e: RPointerEvent) => {
+      if (e.pointerType === "mouse") return;
+      start = { x: e.clientX, y: e.clientY };
+      timer = window.setTimeout(() => { if (start) { lastMenuAt = Date.now(); open(idea, start.x, start.y); start = null; } }, 500);
+    },
+    onPointerMove: (e: RPointerEvent) => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) clear(); },
+    onPointerUp: clear, onPointerCancel: clear, onPointerLeave: clear,
+  };
+}
+
+function IdeaMenu({ menu, onClose }: { menu: { idea: Idea; x: number; y: number }; onClose: () => void }) {
+  const { update, archive, go } = useLab();
+  const ref = useRef<HTMLDivElement>(null);
+  const { idea } = menu;
+  useEffect(() => {
+    const close = () => onClose();
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const down = (e: Event) => { if (!ref.current?.contains(e.target as Node)) onClose(); };
+    window.addEventListener("pointerdown", down);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("pointerdown", down);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("keydown", key);
+    };
+  }, [onClose]);
+  const left = Math.max(8, Math.min(menu.x, window.innerWidth - 208));
+  const top = Math.max(8, Math.min(menu.y, window.innerHeight - 170));
+  const setMaybe = async (value: boolean) => {
+    onClose();
+    if (await update("ideas", idea.id, { maybeLater: value })) {
+      toast(value ? `Moved “${idea.title}” to Maybe later` : `Moved “${idea.title}” back`, {
+        action: { label: "Undo", onClick: () => void update("ideas", idea.id, { maybeLater: !value }) },
+      });
+    }
+  };
+  return (
+    <div ref={ref} role="menu" className="idea-menu" style={{ left, top }} onContextMenu={e => e.preventDefault()}>
+      <div className="idea-menu-title">{idea.title}</div>
+      <button role="menuitem" type="button" onClick={() => { onClose(); go(`idea/${idea.id}`); }}><ArrowUpRight className="size-4" /> Open</button>
+      <button role="menuitem" type="button" onClick={() => void setMaybe(!idea.maybeLater)}>
+        {idea.maybeLater ? <Undo2 className="size-4" /> : <Clock className="size-4" />} {idea.maybeLater ? "Move back to list" : "Maybe later"}
+      </button>
+      <button role="menuitem" type="button" className="danger" onClick={() => { onClose(); void archive("ideas", idea.id, idea.title); }}>
+        <Archive className="size-4" /> Delete
+      </button>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Card
@@ -23,14 +94,14 @@ export const DEFAULT_METRICS: CardMetric[] = [
   { label: "Passive Potential", value: passiveLevel },
 ];
 
-export function IdeaCard({ idea, metrics = DEFAULT_METRICS }: { idea: Idea; metrics?: CardMetric[] }) {
+export function IdeaCard({ idea, metrics = DEFAULT_METRICS, onMenu }: { idea: Idea; metrics?: CardMetric[]; onMenu?: MenuOpen }) {
   const { go, data } = useLab();
   const running = data.actuals.get(idea.id)?.running ?? 0;
   const todo = openTaskCount(idea.tasks);
   const summary = (idea.description || idea.personalFitAngle || idea.howItEarns || "Ready for a thesis and a first low-cost test.")
     .replace(/income-opportunity pipeline/gi, "income plan");
   return (
-    <button type="button" onClick={() => go(`idea/${idea.id}`)} className="idea-card">
+    <button type="button" onClick={() => go(`idea/${idea.id}`)} className="idea-card" {...menuHandlers(idea, onMenu)}>
       <div className="flex items-start justify-between gap-3">
         <span className="card-kicker">{[idea.horizon, idea.opportunityType, idea.incomeStyle].filter(Boolean).join(" · ")}</span>
         {running > 0 && (
@@ -71,7 +142,7 @@ export type Column = {
   numeric?: boolean;
 };
 
-export function IdeaTable({ ideas, columns }: { ideas: Idea[]; columns: Column[] }) {
+export function IdeaTable({ ideas, columns, onMenu }: { ideas: Idea[]; columns: Column[]; onMenu?: MenuOpen }) {
   const { go } = useLab();
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const rows = useMemo(() => {
@@ -106,7 +177,7 @@ export function IdeaTable({ ideas, columns }: { ideas: Idea[]; columns: Column[]
         </thead>
         <tbody>
           {rows.map(i => (
-            <tr key={i.id} onClick={() => go(`idea/${i.id}`)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter") go(`idea/${i.id}`); }}>
+            <tr key={i.id} {...menuHandlers(i, onMenu)} onClick={() => go(`idea/${i.id}`)} tabIndex={0} onKeyDown={e => { if (e.key === "Enter") go(`idea/${i.id}`); }}>
               <th scope="row" className="sticky-col">
                 <span className="table-title">{i.title} <ActiveBadge active={i.active} compact /></span>
                 <span className="table-sub">{i.category}</span>
@@ -177,16 +248,21 @@ export function OpportunityLibrary({
   toolbarExtra?: ReactNode;
   groupBy?: (idea: Idea) => string;
 }) {
+  const { go, update } = useLab();
   const [view, setView] = useStored<"cards" | "table">(`lab:view:${storageKey}`, "cards");
   const [sortKey, setSortKey] = useStored(`lab:sort:${storageKey}`, sorts[0]?.key ?? "");
   const [values, setValues] = useState<Record<string, FilterValue>>({});
   const [text, setText] = useState("");
+  const [menu, setMenu] = useState<{ idea: Idea; x: number; y: number } | null>(null);
+  const openMenu: MenuOpen = (idea, x, y) => setMenu({ idea, x, y });
+  const maybe = useMemo(() => ideas.filter(i => i.maybeLater), [ideas]);
+  const mainIdeas = useMemo(() => ideas.filter(i => !i.maybeLater), [ideas]);
 
   const active = Object.entries(values).filter(([, v]) => v !== null && v !== "" && v !== false);
 
   const visible = useMemo(() => {
     const q = text.trim().toLowerCase();
-    let list = ideas.filter(i => {
+    let list = mainIdeas.filter(i => {
       if (q && !`${i.title} ${i.category} ${i.description} ${i.personalFitAngle} ${i.notes}`.toLowerCase().includes(q)) return false;
       for (const f of filters) {
         const v = values[f.key];
@@ -209,7 +285,7 @@ export function OpportunityLibrary({
       });
     }
     return list;
-  }, [ideas, filters, values, text, sorts, sortKey]);
+  }, [mainIdeas, filters, values, text, sorts, sortKey]);
 
   const choices = (f: Extract<FilterDef, { kind: "choice" }>) =>
     f.options ?? [...new Set(ideas.map(f.get).filter(Boolean))].sort();
@@ -282,24 +358,38 @@ export function OpportunityLibrary({
         </div>
       )}
 
-      <p className="library-count"><strong>{visible.length}</strong> of {ideas.length} opportunities</p>
+      <p className="library-count"><strong>{visible.length}</strong> of {mainIdeas.length} opportunities</p>
 
       {visible.length === 0 ? (
         <Empty title={emptyTitle} text={active.length || text ? "No opportunities match these filters." : emptyText} />
       ) : view === "table" ? (
-        <IdeaTable ideas={visible} columns={columns} />
+        <IdeaTable ideas={visible} columns={columns} onMenu={openMenu} />
       ) : groups ? (
         <div className="grid gap-10">
           {groups.map(([name, list]) => (
             <section key={name}>
               <h3 className="group-title">{name} <span>{list.length}</span></h3>
-              <div className="idea-grid">{list.map(i => <IdeaCard key={i.id} idea={i} metrics={metrics} />)}</div>
+              <div className="idea-grid">{list.map(i => <IdeaCard key={i.id} idea={i} metrics={metrics} onMenu={openMenu} />)}</div>
             </section>
           ))}
         </div>
       ) : (
-        <div className="idea-grid">{visible.map(i => <IdeaCard key={i.id} idea={i} metrics={metrics} />)}</div>
+        <div className="idea-grid">{visible.map(i => <IdeaCard key={i.id} idea={i} metrics={metrics} onMenu={openMenu} />)}</div>
       )}
+      {maybe.length > 0 && (
+        <details className="maybe-later">
+          <summary><ChevronRight className="size-4 maybe-chevron" /> Maybe later <span>{maybe.length}</span></summary>
+          <ul>
+            {maybe.map(i => (
+              <li key={i.id} {...menuHandlers(i, openMenu)}>
+                <button type="button" onClick={() => go(`idea/${i.id}`)}>{i.title}</button>
+                <button type="button" className="maybe-back" onClick={() => void update("ideas", i.id, { maybeLater: false })}>Move back</button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {menu && <IdeaMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>
   );
 }
