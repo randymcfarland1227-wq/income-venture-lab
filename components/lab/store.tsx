@@ -160,6 +160,11 @@ export function LabProvider({ children }: { children: ReactNode }) {
     }
   }, [save]);
 
+  // Console hook for one-off data fixes (e.g. window.__ivl.save({op:"update",...})).
+  useEffect(() => {
+    (window as unknown as { __ivl?: unknown }).__ivl = { save, state };
+  }, [save, state]);
+
   // Paint the saved state immediately. If it is stale, reconcile in the
   // background so an old browser session never remains hours behind Sheets.
   useEffect(() => {
