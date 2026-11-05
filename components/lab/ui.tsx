@@ -44,7 +44,7 @@ export function SectionHeader({ eyebrow, title, description, action }: { eyebrow
 
 const TONES: Array<[RegExp, string]> = [
   [/running|testing|in progress|building|researching|validate|build|consider/i, "active"],
-  [/shortlist|validated|evidence supports|done|complete|scale|earning|launch/i, "good"],
+  [/^active$|shortlist|validated|evidence supports|done|complete|scale|earning|launch/i, "good"],
   [/avoid|stop|evidence against|blocked|paused|conflict|issue/i, "warn"],
 ];
 

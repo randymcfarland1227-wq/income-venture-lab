@@ -6,7 +6,7 @@ import { Archive, ArrowDown, Clock, ChevronRight, Undo2, ArrowUp, ArrowUpRight, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { incomeLevel, monthYear, passiveLevel, startupLevel, type Idea } from "@/lib/domain";
+import { incomeLevel, isInvestmentIdea, monthYear, passiveLevel, startupLevel, type Idea } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { useLab } from "./store";
 import { ActiveBadge, openTaskCount } from "./tracking";
@@ -103,7 +103,7 @@ export function IdeaCard({ idea, metrics = DEFAULT_METRICS, onMenu }: { idea: Id
   return (
     <button type="button" onClick={() => go(`idea/${idea.id}`)} className="idea-card" {...menuHandlers(idea, onMenu)}>
       <div className="flex items-start justify-between gap-3">
-        <span className="card-kicker">{[idea.horizon, idea.opportunityType, idea.incomeStyle].filter(Boolean).join(" · ")}</span>
+        <span className="card-kicker">{(isInvestmentIdea(idea) ? [idea.category] : [idea.horizon, idea.opportunityType, idea.incomeStyle]).filter(Boolean).join(" · ")}</span>
         {running > 0 && (
           <span className="testing-flag" title={`${running} experiment running`}><FlaskConical className="size-3" /> Testing</span>
         )}

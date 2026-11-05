@@ -21,7 +21,7 @@ export type VentureTrack = (typeof VENTURE_TRACKS)[number];
 
 export const STAGES = ["Discover", "Validate", "Build", "Launch", "Scale"] as const;
 export const STATUS_SUGGESTIONS = [
-  "Exploring", "Shortlist", "Consider", "Research", "Testing", "Validated", "Building", "Earning", "Paused", "Avoid for now",
+  "Active", "Exploring", "Shortlist", "Consider", "Research", "Testing", "Validated", "Building", "Earning", "Paused", "Avoid for now",
 ];
 export const EXPERIMENT_STATUSES = ["Planned", "Running", "Complete", "Paused", "Stopped"];
 export const DECISIONS = ["Scale", "Test Again", "Modify", "Pause", "Stop"];
@@ -304,6 +304,9 @@ const VENTURE_TYPES = new Set([
 
 export const isVenture = (idea: Idea) => VENTURE_TYPES.has(idea.opportunityType);
 export const isShortTermNo = (idea: Idea) => includesShort(idea.horizon) && String(idea.status ?? "").trim().toLowerCase() === "no";
+/** Investments live on their own Opportunities tab: sheet Category reads "Investment · Short-term" / "Investment · Long-term". */
+export const isInvestmentIdea = (idea: Idea) => /^investment/i.test(String(idea.category ?? ""));
+export const investmentHorizon = (idea: Idea) => (/long/i.test(String(idea.category)) ? "Long-term" : "Short-term");
 export const isPassive = (idea: Idea) => idea.incomeStyle === "Passive-ish" || (idea.passivePotential ?? 0) >= 4;
 
 /** Strategy meta-items about career capital — not discrete income opportunities. */
